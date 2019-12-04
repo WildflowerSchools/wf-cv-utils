@@ -1,1 +1,1 @@
-from wf-cv-utils.core import *
+from cv_utils.core import *
