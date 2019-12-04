@@ -1,4 +1,4 @@
-import cvutilities.datetime_utilities
+import cv_datetime_utils
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
@@ -36,7 +36,7 @@ def generate_camera_image_wildflower_s3_object_name(
 # names) from a Python datetime object
 def generate_wildflower_s3_datetime_strings(
     datetime):
-    datetime_native_utc_naive = cvutilities.datetime_utilities.convert_to_native_utc_naive(datetime)
+    datetime_native_utc_naive = cv_datetime_utils.convert_to_native_utc_naive(datetime)
     date_string = datetime_native_utc_naive.strftime('%Y-%m-%d')
     time_string = datetime_native_utc_naive.strftime('%H-%M-%S')
     return date_string, time_string
