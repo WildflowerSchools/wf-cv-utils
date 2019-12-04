@@ -10,7 +10,7 @@ BASE_DEPENDENCIES = [
     'numpy>=1.14',
     'scipy>=1.1',
     'matplotlib>=2.2',
-    'boto3>=1.7',
+    'boto3>=1.7'
 ]
 
 # allow setup.py to be run from any path
