@@ -280,7 +280,8 @@ def project_points(
         rotation_vector,
         translation_vector,
         camera_matrix,
-        distortion_coefficients):
+        distortion_coefficients,
+        remove_behind_camera=False):
     object_points = np.asarray(object_points)
     rotation_vector = np.asarray(rotation_vector)
     translation_vector = np.asarray(translation_vector)
@@ -298,8 +299,39 @@ def project_points(
         translation_vector,
         camera_matrix,
         distortion_coefficients)[0]
+    if remove_behind_camera:
+        behind_camera_boolean = behind_camera(
+            object_points,
+            rotation_vector,
+            translation_vector
+        )
+        image_points[behind_camera_boolean] = np.array([np.nan, np.nan])
     image_points = np.squeeze(image_points)
     return image_points
+
+def behind_camera(
+        object_points,
+        rotation_vector,
+        translation_vector):
+    object_points = np.asarray(object_points)
+    rotation_vector = np.asarray(rotation_vector)
+    translation_vector = np.asarray(translation_vector)
+    if object_points.size == 0:
+        return np.zeros((0, 2))
+    object_points = object_points.reshape((-1, 3))
+    rotation_vector = rotation_vector.reshape(3)
+    translation_vector = translation_vector.reshape(3)
+    object_points_transformed = transform_object_points(
+        object_points,
+        rotation_vector,
+        translation_vector
+    )
+    behind_camera_boolean = np.apply_along_axis(
+        lambda point: point[2] <= 0,
+        axis=-1,
+        arr=object_points_transformed
+    )
+    return behind_camera_boolean
 
 def undistort_points(
     image_points,
