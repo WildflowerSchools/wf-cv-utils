@@ -110,14 +110,15 @@ def draw_background_image(
 # drawing function above, adds formating, and shows the plot.
 def plot_background_image(
     image,
-    alpha = None):
+    alpha = None,
+    show_axes=True):
     if alpha is None:
         alpha = 0.4
     image_size=np.array([
         image.shape[1],
         image.shape[0]])
     draw_background_image(image, alpha)
-    format_2d_image_plot(image_size)
+    format_2d_image_plot(image_size, show_axes)
     plt.show()
 
 def compose_transformations(
@@ -710,26 +711,31 @@ def draw_2d_image_points(
             plt.text(points_image_u[i], points_image_v[i], point_labels[i])
 
 def format_2d_image_plot(
-    image_size=None):
+    image_size=None,
+    show_axes=True):
     if image_size is not None:
         plt.xlim(0, image_size[0])
         plt.ylim(0, image_size[1])
-    plt.xlabel(r'$u$')
-    plt.ylabel(r'$v$')
+    if show_axes:
+        plt.xlabel(r'$u$')
+        plt.ylabel(r'$v$')
+        plt.gca().xaxis.set_ticks_position('top')
+        plt.gca().xaxis.set_label_position('top')
+    else:
+        plt.axis('off')
     plt.gca().invert_yaxis()
-    plt.gca().xaxis.set_ticks_position('top')
-    plt.gca().xaxis.set_label_position('top')
     plt.gca().set_aspect('equal')
 
 def plot_2d_image_points(
     image_points,
     image_size=None,
-    point_labels=[]):
+    point_labels=[],
+    show_axes=True):
     image_points = np.asarray(image_points).reshape((-1, 2))
     draw_2d_image_points(
         image_points,
         point_labels)
-    format_2d_image_plot(image_size)
+    format_2d_image_plot(image_size, show_axes)
     plt.show()
 
 def draw_3d_object_points_topdown(
