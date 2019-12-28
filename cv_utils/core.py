@@ -101,14 +101,18 @@ def fetch_image_from_wildflower_s3(
 # to draw other elements before formatting and showing the chart.
 def draw_background_image(
     image,
-    alpha = 0.4):
+    alpha = None):
+    if alpha is None:
+        alpha = 0.4
     plt.imshow(cv.cvtColor(image, cv.COLOR_BGR2RGB), alpha = alpha)
 
 # Take an image in OpenCV format and plot it as a Matplotlib plot. Calls the
 # drawing function above, adds formating, and shows the plot.
 def plot_background_image(
     image,
-    alpha = 0.4):
+    alpha = None):
+    if alpha is None:
+        alpha = 0.4
     image_size=np.array([
         image.shape[1],
         image.shape[0]])
