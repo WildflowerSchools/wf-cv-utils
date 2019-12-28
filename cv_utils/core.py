@@ -706,9 +706,10 @@ def draw_2d_image_points(
             plt.text(points_image_u[i], points_image_v[i], point_labels[i])
 
 def format_2d_image_plot(
-    image_size=[1296, 972]):
-    plt.xlim(0, image_size[0])
-    plt.ylim(0, image_size[1])
+    image_size=None):
+    if image_size is not None:
+        plt.xlim(0, image_size[0])
+        plt.ylim(0, image_size[1])
     plt.xlabel(r'$u$')
     plt.ylabel(r'$v$')
     plt.gca().invert_yaxis()
@@ -718,7 +719,7 @@ def format_2d_image_plot(
 
 def plot_2d_image_points(
     image_points,
-    image_size=[1296, 972],
+    image_size=None,
     point_labels=[]):
     image_points = np.asarray(image_points).reshape((-1, 2))
     draw_2d_image_points(
