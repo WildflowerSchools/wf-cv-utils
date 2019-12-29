@@ -101,19 +101,24 @@ def fetch_image_from_wildflower_s3(
 # to draw other elements before formatting and showing the chart.
 def draw_background_image(
     image,
-    alpha = 0.4):
+    alpha = None):
+    if alpha is None:
+        alpha = 0.4
     plt.imshow(cv.cvtColor(image, cv.COLOR_BGR2RGB), alpha = alpha)
 
 # Take an image in OpenCV format and plot it as a Matplotlib plot. Calls the
 # drawing function above, adds formating, and shows the plot.
 def plot_background_image(
     image,
-    alpha = 0.4):
+    alpha = None,
+    show_axes=True):
+    if alpha is None:
+        alpha = 0.4
     image_size=np.array([
         image.shape[1],
         image.shape[0]])
     draw_background_image(image, alpha)
-    format_2d_image_plot(image_size)
+    format_2d_image_plot(image_size, show_axes)
     plt.show()
 
 def compose_transformations(
@@ -280,7 +285,8 @@ def project_points(
         rotation_vector,
         translation_vector,
         camera_matrix,
-        distortion_coefficients):
+        distortion_coefficients,
+        remove_behind_camera=False):
     object_points = np.asarray(object_points)
     rotation_vector = np.asarray(rotation_vector)
     translation_vector = np.asarray(translation_vector)
@@ -298,8 +304,39 @@ def project_points(
         translation_vector,
         camera_matrix,
         distortion_coefficients)[0]
+    if remove_behind_camera:
+        behind_camera_boolean = behind_camera(
+            object_points,
+            rotation_vector,
+            translation_vector
+        )
+        image_points[behind_camera_boolean] = np.array([np.nan, np.nan])
     image_points = np.squeeze(image_points)
     return image_points
+
+def behind_camera(
+        object_points,
+        rotation_vector,
+        translation_vector):
+    object_points = np.asarray(object_points)
+    rotation_vector = np.asarray(rotation_vector)
+    translation_vector = np.asarray(translation_vector)
+    if object_points.size == 0:
+        return np.zeros((0, 2))
+    object_points = object_points.reshape((-1, 3))
+    rotation_vector = rotation_vector.reshape(3)
+    translation_vector = translation_vector.reshape(3)
+    object_points_transformed = transform_object_points(
+        object_points,
+        rotation_vector,
+        translation_vector
+    )
+    behind_camera_boolean = np.apply_along_axis(
+        lambda point: point[2] <= 0,
+        axis=-1,
+        arr=object_points_transformed
+    )
+    return behind_camera_boolean
 
 def undistort_points(
     image_points,
@@ -674,25 +711,31 @@ def draw_2d_image_points(
             plt.text(points_image_u[i], points_image_v[i], point_labels[i])
 
 def format_2d_image_plot(
-    image_size=[1296, 972]):
-    plt.xlim(0, image_size[0])
-    plt.ylim(0, image_size[1])
-    plt.xlabel(r'$u$')
-    plt.ylabel(r'$v$')
+    image_size=None,
+    show_axes=True):
+    if image_size is not None:
+        plt.xlim(0, image_size[0])
+        plt.ylim(0, image_size[1])
+    if show_axes:
+        plt.xlabel(r'$u$')
+        plt.ylabel(r'$v$')
+        plt.gca().xaxis.set_ticks_position('top')
+        plt.gca().xaxis.set_label_position('top')
+    else:
+        plt.axis('off')
     plt.gca().invert_yaxis()
-    plt.gca().xaxis.set_ticks_position('top')
-    plt.gca().xaxis.set_label_position('top')
     plt.gca().set_aspect('equal')
 
 def plot_2d_image_points(
     image_points,
-    image_size=[1296, 972],
-    point_labels=[]):
+    image_size=None,
+    point_labels=[],
+    show_axes=True):
     image_points = np.asarray(image_points).reshape((-1, 2))
     draw_2d_image_points(
         image_points,
         point_labels)
-    format_2d_image_plot(image_size)
+    format_2d_image_plot(image_size, show_axes)
     plt.show()
 
 def draw_3d_object_points_topdown(
