@@ -1,5 +1,6 @@
 import cv2 as cv
 import cv_utils.color
+import numpy as np
 import math
 
 MARKER_DICT = {
@@ -21,14 +22,19 @@ def draw_circle(
     fill=True,
     alpha=1.0
 ):
+    center = tuple(map(lambda x: int(round(x)), coordinates))
+    for coordinate in center:
+        if abs(coordinate) > 2**30:
+            return original_image
     color_bgr = cv_utils.color.hex_to_bgr(color)
     thickness=math.ceil(line_width)
     if fill:
         thickness = cv.FILLED
     overlay_image = original_image.copy()
+    # print(center)
     overlay_image = cv.circle(
         img=overlay_image,
-        center=tuple(coordinates),
+        center=center,
         radius=math.ceil(radius),
         color=color_bgr,
         thickness=thickness,
@@ -50,12 +56,20 @@ def draw_line(
     color='#00ff00',
     alpha=1.0
 ):
+    pt1 = tuple(map(lambda x: int(round(x)), coordinates[0]))
+    pt2 = tuple(map(lambda x: int(round(x)), coordinates[1]))
+    for coordinate in pt1:
+        if abs(coordinate) > 2**30:
+            return original_image
+    for coordinate in pt2:
+        if abs(coordinate) > 2**30:
+            return original_image
     color_bgr = cv_utils.color.hex_to_bgr(color)
     overlay_image = original_image.copy()
     overlay_image = cv.line(
         img=overlay_image,
-        pt1 = tuple(coordinates[0]),
-        pt2 = tuple(coordinates[1]),
+        pt1=pt1,
+        pt2=pt2,
         color=color_bgr,
         thickness=math.ceil(line_width),
         lineType=cv.LINE_AA
@@ -81,6 +95,9 @@ def draw_text(
     color='#00ff00',
     alpha=1.0
 ):
+    for coordinate in coordinates:
+        if abs(coordinate) > 2**30:
+            return original_image
     color_bgr = cv_utils.color.hex_to_bgr(color)
     thickness=math.ceil(line_width)
     text_box_size, baseline = cv.getTextSize(
@@ -135,6 +152,10 @@ def draw_point(
     color='#00ff00',
     alpha=1.0
 ):
+    position = tuple(map(lambda x: int(round(x)), coordinates))
+    for coordinate in position:
+        if abs(coordinate) > 2**30:
+            return original_image
     if marker == '.':
         return draw_circle(
             original_image,
@@ -149,7 +170,7 @@ def draw_point(
     overlay_image = original_image.copy()
     overlay_image = cv.drawMarker(
         img=overlay_image,
-        position=tuple(coordinates),
+        position=position,
         color=color_bgr,
         markerType=markerType,
         markerSize=math.ceil(marker_size),
@@ -173,6 +194,14 @@ def draw_rectangle(
     fill=True,
     alpha=1.0
 ):
+    pt1 = tuple(map(lambda x: int(round(x)), coordinates[0]))
+    pt2 = tuple(map(lambda x: int(round(x)), coordinates[1]))
+    for coordinate in pt1:
+        if abs(coordinate) > 2**30:
+            return original_image
+    for coordinate in pt2:
+        if abs(coordinate) > 2**30:
+            return original_image
     color_bgr = cv_utils.color.hex_to_bgr(color)
     thickness=math.ceil(line_width)
     if fill:
@@ -180,8 +209,8 @@ def draw_rectangle(
     overlay_image = original_image.copy()
     overlay_image = cv.rectangle(
         img=overlay_image,
-        pt1 = tuple(coordinates[0]),
-        pt2 = tuple(coordinates[1]),
+        pt1=pt1,
+        pt2=pt2,
         color=color_bgr,
         thickness=thickness,
         lineType=cv.LINE_AA
