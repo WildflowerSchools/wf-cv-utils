@@ -110,12 +110,12 @@ def draw_text(
     overlay_image = cv.putText(
         img=overlay_image,
         text=text,
-        org=(round(org_u), round(org_v)),
+        org=(int(round(org_u)), int(round(org_v))),
         fontFace=font_face,
         fontScale=font_scale,
         color=color_bgr,
         thickness=thickness,
-        lineType=cv.LINE_AA,
+        lineType=cv.LINE_AA
     )
     new_image = cv.addWeighted(
         overlay_image,
