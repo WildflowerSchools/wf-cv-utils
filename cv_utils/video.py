@@ -1,5 +1,6 @@
 import cv2 as cv
 import datetime
+import os
 
 class VideoInput:
     def __init__(
@@ -7,6 +8,8 @@ class VideoInput:
         input_path,
         start_time=None
     ):
+        if not os.path.isfile(input_path):
+            raise ValueError('No file at specified path: {}'.format(input_path))
         self.capture_object = cv.VideoCapture(input_path)
         self.video_parameters = VideoParameters(
             start_time=start_time,
