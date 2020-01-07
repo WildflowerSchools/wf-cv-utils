@@ -2,6 +2,7 @@ import cv2 as cv
 import datetime
 import os
 
+
 class VideoInput:
     def __init__(
         self,
@@ -33,6 +34,7 @@ class VideoInput:
         else:
             return None
 
+
 class VideoOutput:
     def __init__(
         self,
@@ -59,6 +61,7 @@ class VideoOutput:
     def write_frame(self, frame):
         self.writer_object.write(frame)
 
+
 class VideoParameters:
     def __init__(
         self,
@@ -70,7 +73,7 @@ class VideoParameters:
         four_cc_int=None,
         time_index=None
     ):
-        self.start_time=None
+        self.start_time = None
         self.frame_width = None
         self.frame_height = None
         self.fps = None
@@ -80,43 +83,43 @@ class VideoParameters:
         if start_time is not None:
             try:
                 self.start_time = start_time.astimezone(datetime.timezone.utc)
-            except:
+            except Exception as e:
                 try:
                     self.start_time = datetime.fromisoformat(start_time).astimezone(datetime.timezone.utc)
-                except:
+                except Exception as e:
                     raise ValueError('Cannot parse start time: {}'.format(start_time))
         if frame_width is not None:
             try:
                 self.frame_width = int(frame_width)
-            except:
+            except Exception as e:
                 raise ValueError('Frame width must be convertible to integer')
         if frame_height is not None:
             try:
                 self.frame_height = int(frame_height)
-            except:
+            except Exception as e:
                 raise ValueError('Frame height must be convertible to integer')
         if fps is not None:
             try:
                 self.fps = float(fps)
-            except:
+            except Exception as e:
                 raise ValueError('FPS must be convertible to float')
         if frame_count is not None:
             try:
                 self.frame_count = int(frame_count)
-            except:
+            except Exception as e:
                 raise ValueError('Frame count must be convertible to integer')
         if four_cc_int is not None:
             try:
                 self.four_cc_int = int(four_cc_int)
-            except:
+            except Exception as e:
                 raise ValueError('FourCC code must be convertible to integer')
         if time_index is not None:
             try:
                 self.time_index = [timestamp.astimezone(datetime.timezone.utc) for timestamp in time_index]
-            except:
+            except Exception as e:
                 try:
                     self.time_index = [datetime.fromisoformat(timestamp).astimezone(datetime.timezone.utc) for timestamp in time_index]
-                except:
+                except Exception as e:
                     raise ValueError('Cannot parse time index')
         if self.time_index is None and self.start_time is not None and self.fps is not None and self.frame_count is not None:
-            self.time_index = [self.start_time + index*datetime.timedelta(microseconds = int(10**6/self.fps)) for index in range(self.frame_count)]
+            self.time_index = [self.start_time + index * datetime.timedelta(microseconds=int(10**6 / self.fps)) for index in range(self.frame_count)]
