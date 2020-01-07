@@ -8,11 +8,11 @@ deps:
 
 test-deps: deps
 	source env/bin/activate; \
-	pip install pytest pycodestyle
+	pip install pytest pycodestyle pytest-cov
 
 test: test-deps
 	source env/bin/activate; \
-	pytest --cov-report term-missing --cov=protonpack -v tests/
+	pytest --cov-report term-missing --cov=cv_utils -v tests/
 
 lint: test-deps
 	source env/bin/activate; \
