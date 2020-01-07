@@ -7,6 +7,7 @@ import boto3
 import json
 import os
 
+
 # For now, the Wildflower-specific S3 functionality is intermingled with the more
 # general S3 functionality. We should probably separate these at some point. For
 # the S3 functions below to work, the environment must include AWS_ACCESS_KEY_ID and
@@ -16,12 +17,13 @@ import os
 classroom_data_wildflower_s3_bucket_name = 'wf-classroom-data'
 camera_image_wildflower_s3_directory_name = 'camera'
 
+
 # Generate the Wildflower S3 object name for a camera image from a classroom
 # name, a camera name, and a Python datetime object
 def generate_camera_image_wildflower_s3_object_name(
-    classroom_name,
-    camera_name,
-    datetime):
+        classroom_name,
+        camera_name,
+        datetime):
     date_string, time_string = generate_wildflower_s3_datetime_strings(datetime)
     camera_image_wildflower_s3_object_name = 'camera-{}/{}/{}/{}/still_{}-{}.jpg'.format(
         classroom_name,
@@ -32,18 +34,20 @@ def generate_camera_image_wildflower_s3_object_name(
         time_string)
     return camera_image_wildflower_s3_object_name
 
+
 # Generate date and time strings (as they appear in our Wildflower S3 object
 # names) from a Python datetime object
 def generate_wildflower_s3_datetime_strings(
-    datetime):
+        datetime):
     datetime_native_utc_naive = cv_datetime_utils.convert_to_native_utc_naive(datetime)
     date_string = datetime_native_utc_naive.strftime('%Y-%m-%d')
     time_string = datetime_native_utc_naive.strftime('%H-%M-%S')
     return date_string, time_string
 
+
 def fetch_camera_calibration_data_from_local_drive_single_camera(
-    camera_name,
-    camera_calibration_data_directory = '.'):
+        camera_name,
+        camera_calibration_data_directory='.'):
     camera_calibration_data_filename = camera_name + '_cal.json'
     camera_calibration_data_path = os.path.join(
         camera_calibration_data_directory,
@@ -57,9 +61,10 @@ def fetch_camera_calibration_data_from_local_drive_single_camera(
         'translation_vector': np.asarray(camera_calibration_json_data_single_camera['translationVector'])}
     return camera_calibration_data_single_camera
 
+
 def fetch_camera_calibration_data_from_local_drive_multiple_cameras(
-    camera_names,
-    camera_calibration_data_directory = '.'):
+        camera_names,
+        camera_calibration_data_directory='.'):
     camera_calibration_data_multiple_cameras = []
     for camera_name in camera_names:
         camera_calibration_data_multiple_cameras.append(
@@ -68,10 +73,12 @@ def fetch_camera_calibration_data_from_local_drive_multiple_cameras(
                 camera_calibration_data_directory))
     return camera_calibration_data_multiple_cameras
 
+
 # Fetch an image from a local image file and return it in OpenCV format
 def fetch_image_from_local_drive(image_path):
     image = cv.imread(image_path)
     return image
+
 
 # Fetch an image stored on S3 and specified by S3 bucket and object names and
 # return it in OpenCV format
@@ -79,15 +86,16 @@ def fetch_image_from_s3_object(s3_bucket_name, s3_object_name):
     s3_object = boto3.resource('s3').Object(s3_bucket_name, s3_object_name)
     s3_object_content = s3_object.get()['Body'].read()
     s3_object_content_array = np.frombuffer(s3_object_content, dtype=np.uint8)
-    image = cv.imdecode(s3_object_content_array, flags = cv.IMREAD_UNCHANGED)
+    image = cv.imdecode(s3_object_content_array, flags=cv.IMREAD_UNCHANGED)
     return image
+
 
 # Fetch a camera image stored on S3 and specified by classroom name, camera
 # name, and Python datetime object and return it in OpenCV format
 def fetch_image_from_wildflower_s3(
-    classroom_name,
-    camera_name,
-    datetime):
+        classroom_name,
+        camera_name,
+        datetime):
     s3_bucket_name = classroom_data_wildflower_s3_bucket_name
     s3_object_name = generate_camera_image_wildflower_s3_object_name(
         classroom_name,
@@ -96,37 +104,40 @@ def fetch_image_from_wildflower_s3(
     image = fetch_image_from_s3_object(s3_bucket_name, s3_object_name)
     return image
 
+
 # Take an image in OpenCV format and draw it as a background for a Matplotlib
 # plot. We separate this from the plotting function below because we might want
 # to draw other elements before formatting and showing the chart.
 def draw_background_image(
-    image,
-    alpha = None):
+        image,
+        alpha=None):
     if alpha is None:
         alpha = 0.4
-    plt.imshow(cv.cvtColor(image, cv.COLOR_BGR2RGB), alpha = alpha)
+    plt.imshow(cv.cvtColor(image, cv.COLOR_BGR2RGB), alpha=alpha)
+
 
 # Take an image in OpenCV format and plot it as a Matplotlib plot. Calls the
 # drawing function above, adds formating, and shows the plot.
 def plot_background_image(
-    image,
-    alpha = None,
-    show_axes=True):
+        image,
+        alpha=None,
+        show_axes=True):
     if alpha is None:
         alpha = 0.4
-    image_size=np.array([
+    image_size = np.array([
         image.shape[1],
         image.shape[0]])
     draw_background_image(image, alpha)
     format_2d_image_plot(image_size, show_axes)
     plt.show()
 
+
 def compose_transformations(
-    rotation_vector_1,
-    translation_vector_1,
-    rotation_vector_2,
-    translation_vector_2):
-    rotation_vector_1= np.asarray(rotation_vector_1).reshape(3)
+        rotation_vector_1,
+        translation_vector_1,
+        rotation_vector_2,
+        translation_vector_2):
+    rotation_vector_1 = np.asarray(rotation_vector_1).reshape(3)
     translation_vector_1 = np.asarray(translation_vector_1).reshape(3)
     rotation_vector_2 = np.asarray(rotation_vector_2).reshape(3)
     translation_vector_2 = np.asarray(translation_vector_2).reshape(3)
@@ -139,9 +150,10 @@ def compose_transformations(
     translation_vector_composed = np.squeeze(translation_vector_composed)
     return rotation_vector_composed, translation_vector_composed
 
+
 def invert_transformation(
-    rotation_vector,
-    translation_vector):
+        rotation_vector,
+        translation_vector):
     rotation_vector = np.asarray(rotation_vector).reshape(3)
     translation_vector = np.asarray(translation_vector).reshape(3)
     new_rotation_vector, new_translation_vector = compose_transformations(
@@ -153,10 +165,11 @@ def invert_transformation(
     new_translation_vector = np.squeeze(new_translation_vector)
     return new_rotation_vector, new_translation_vector
 
+
 def transform_object_points(
-    object_points,
-    rotation_vector = np.array([0.0, 0.0, 0.0]),
-    translation_vector = np.array([0.0, 0.0, 0.0])):
+        object_points,
+        rotation_vector=np.array([0.0, 0.0, 0.0]),
+        translation_vector=np.array([0.0, 0.0, 0.0])):
     object_points = np.asarray(object_points)
     rotation_vector = np.asarray(rotation_vector)
     translation_vector = np.asarray(translation_vector)
@@ -173,11 +186,12 @@ def transform_object_points(
     transformed_points = np.squeeze(transformed_points)
     return transformed_points
 
+
 def generate_camera_pose(
-    camera_position = np.array([0.0, 0.0, 0.0]),
-    yaw = 0.0,
-    pitch = 0.0,
-    roll = 0.0):
+        camera_position=np.array([0.0, 0.0, 0.0]),
+        yaw=0.0,
+        pitch=0.0,
+        roll=0.0):
     # yaw: 0.0 points north (along the positive y-axis), positive angles rotate counter-clockwise
     # pitch: 0.0 is level with the ground, positive angles rotate upward
     # roll: 0.0 is level with the ground, positive angles rotate clockwise
@@ -187,10 +201,10 @@ def generate_camera_pose(
     rotation_vector_1 = np.array([0.0, 0.0, 0.0])
     translation_vector_1 = -camera_position
     # Second: Rotate the camera so when we lower to the specified inclination, it will point in the specified compass direction
-    rotation_vector_2 = np.array([0.0, 0.0, -(yaw - np.pi/2)])
+    rotation_vector_2 = np.array([0.0, 0.0, -(yaw - np.pi / 2)])
     translation_vector_2 = np.array([0.0, 0.0, 0.0])
     # Third: Lower to the specified inclination
-    rotation_vector_2_3 = np.array([(np.pi/2 - pitch), 0.0, 0.0])
+    rotation_vector_2_3 = np.array([(np.pi / 2 - pitch), 0.0, 0.0])
     translation_vector_2_3 = np.array([0.0, 0.0, 0.0])
     # Fourth: Roll the camera by the specified angle
     rotation_vector_2_3_4 = np.array([0.0, 0.0, -roll])
@@ -215,9 +229,10 @@ def generate_camera_pose(
     translation_vector = np.squeeze(translation_vector)
     return rotation_vector, translation_vector
 
+
 def extract_camera_position(
-    rotation_vector,
-    translation_vector):
+        rotation_vector,
+        translation_vector):
     rotation_vector = np.asarray(rotation_vector).reshape(3)
     translation_vector = np.asarray(translation_vector).reshape(3)
     new_rotation_vector, new_translation_vector = compose_transformations(
@@ -228,9 +243,10 @@ def extract_camera_position(
     camera_position = -np.squeeze(new_translation_vector)
     return camera_position
 
+
 def extract_camera_direction(
-    rotation_vector,
-    translation_vector):
+        rotation_vector,
+        translation_vector):
     rotation_vector = np.asarray(rotation_vector).reshape(3)
     translation_vector = np.asarray(translation_vector).reshape(3)
     camera_direction = np.matmul(
@@ -239,24 +255,29 @@ def extract_camera_direction(
     camera_direction = np.squeeze(camera_direction)
     return camera_direction
 
+
 def reconstruct_z_rotation(x, y):
-    if x>=0.0 and y>=0.0: return np.arctan(y/x)
-    if x>=0.0 and y<0.0: return np.arctan(y/x) + 2*np.pi
-    return np.arctan(y/x) + np.pi
+    if x >= 0.0 and y >= 0.0:
+        return np.arctan(y / x)
+    if x >= 0.0 and y < 0.0:
+        return np.arctan(y / x) + 2 * np.pi
+    return np.arctan(y / x) + np.pi
+
 
 # Currently unused; needs to be fixed up for cases in which x and/or y are close
 # to zero
 def extract_yaw_from_camera_direction(
-    camera_direction):
+        camera_direction):
     camera_direction = np.asarray(camera_direction).reshape(3)
     yaw = reconstruct_z_rotation(
         camera_direction[0],
         camera_direction[1])
     return yaw
 
+
 def generate_camera_matrix(
-    focal_length,
-    principal_point):
+        focal_length,
+        principal_point):
     focal_length = np.asarray(focal_length).reshape(2)
     principal_point = np.asarray(principal_point).reshape(2)
     camera_matrix = np.array([
@@ -265,20 +286,22 @@ def generate_camera_matrix(
         [0, 0, 1.0]])
     return camera_matrix
 
+
 def generate_projection_matrix(
-    camera_matrix,
-    rotation_vector,
-    translation_vector):
-    camera_matrix = np.asarray(camera_matrix).reshape((3,3))
+        camera_matrix,
+        rotation_vector,
+        translation_vector):
+    camera_matrix = np.asarray(camera_matrix).reshape((3, 3))
     rotation_vector = np.asarray(rotation_vector).reshape(3)
     translation_vector = np.asarray(translation_vector).reshape(3)
     projection_matrix = np.matmul(
         camera_matrix,
         np.concatenate((
             cv.Rodrigues(rotation_vector)[0],
-            translation_vector.reshape((3,1))),
+            translation_vector.reshape((3, 1))),
             axis=1))
     return(projection_matrix)
+
 
 def project_points(
         object_points,
@@ -297,7 +320,7 @@ def project_points(
     object_points = object_points.reshape((-1, 3))
     rotation_vector = rotation_vector.reshape(3)
     translation_vector = translation_vector.reshape(3)
-    camera_matrix = camera_matrix.reshape((3,3))
+    camera_matrix = camera_matrix.reshape((3, 3))
     image_points = cv.projectPoints(
         object_points,
         rotation_vector,
@@ -313,6 +336,7 @@ def project_points(
         image_points[behind_camera_boolean] = np.array([np.nan, np.nan])
     image_points = np.squeeze(image_points)
     return image_points
+
 
 def behind_camera(
         object_points,
@@ -338,17 +362,18 @@ def behind_camera(
     )
     return behind_camera_boolean
 
+
 def undistort_points(
-    image_points,
-    camera_matrix,
-    distortion_coefficients):
+        image_points,
+        camera_matrix,
+        distortion_coefficients):
     image_points = np.asarray(image_points)
     camera_matrix = np.asarray(camera_matrix)
     distortion_coefficients = np.asarray(distortion_coefficients)
     if image_points.size == 0:
         return image_points
     image_points = image_points.reshape((-1, 1, 2))
-    camera_matrix = camera_matrix.reshape((3,3))
+    camera_matrix = camera_matrix.reshape((3, 3))
     undistorted_points = cv.undistortPoints(
         image_points,
         camera_matrix,
@@ -357,13 +382,14 @@ def undistort_points(
     undistorted_points = np.squeeze(undistorted_points)
     return undistorted_points
 
+
 def estimate_camera_pose_from_image_points(
-    image_points_1,
-    image_points_2,
-    camera_matrix,
-    rotation_vector_1 = np.array([0.0, 0.0, 0.0]),
-    translation_vector_1 = np.array([0.0, 0.0, 0.0]),
-    distance_between_cameras = 1.0):
+        image_points_1,
+        image_points_2,
+        camera_matrix,
+        rotation_vector_1=np.array([0.0, 0.0, 0.0]),
+        translation_vector_1=np.array([0.0, 0.0, 0.0]),
+        distance_between_cameras=1.0):
     image_points_1 = np.asarray(image_points_1)
     image_points_2 = np.asarray(image_points_2)
     camera_matrix = np.asarray(camera_matrix)
@@ -375,7 +401,7 @@ def estimate_camera_pose_from_image_points(
     image_points_2 = image_points_2.reshape((-1, 2))
     if image_points_1.shape != image_points_2.shape:
         raise ValueError('Sets of image points do not appear to be the same shape')
-    camera_matrix = camera_matrix.reshape((3,3))
+    camera_matrix = camera_matrix.reshape((3, 3))
     rotation_vector_1 = rotation_vector_1.reshape(3)
     translation_vector_1 = translation_vector_1.reshape(3)
     essential_matrix, mask = cv.findEssentialMat(
@@ -399,14 +425,15 @@ def estimate_camera_pose_from_image_points(
     translation_vector_2 = np.squeeze(translation_vector_2)
     return rotation_vector_2, translation_vector_2
 
+
 def reconstruct_object_points_from_camera_poses(
-    image_points_1,
-    image_points_2,
-    camera_matrix,
-    rotation_vector_1,
-    translation_vector_1,
-    rotation_vector_2,
-    translation_vector_2):
+        image_points_1,
+        image_points_2,
+        camera_matrix,
+        rotation_vector_1,
+        translation_vector_1,
+        rotation_vector_2,
+        translation_vector_2):
     image_points_1 = np.asarray(image_points_1)
     image_points_2 = np.asarray(image_points_2)
     camera_matrix = np.asarray(camera_matrix)
@@ -415,12 +442,12 @@ def reconstruct_object_points_from_camera_poses(
     rotation_vector_2 = np.asarray(rotation_vector_2)
     translation_vector_2 = np.asarray(translation_vector_2)
     if image_points_1.size == 0 or image_points_2.size == 0:
-        return np.zeros((0,3))
+        return np.zeros((0, 3))
     image_points_1 = image_points_1.reshape((-1, 2))
     image_points_2 = image_points_2.reshape((-1, 2))
     if image_points_1.shape != image_points_2.shape:
         raise ValueError('Sets of image points do not appear to be the same shape')
-    camera_matrix = camera_matrix.reshape((3,3))
+    camera_matrix = camera_matrix.reshape((3, 3))
     rotation_vector_1 = rotation_vector_1.reshape(3)
     translation_vector_1 = translation_vector_1.reshape(3)
     rotation_vector_2 = rotation_vector_2.reshape(3)
@@ -443,15 +470,16 @@ def reconstruct_object_points_from_camera_poses(
     object_points = np.squeeze(object_points)
     return object_points
 
+
 def reconstruct_object_points_from_relative_camera_pose(
-    image_points_1,
-    image_points_2,
-    camera_matrix,
-    relative_rotation_vector,
-    relative_translation_vector,
-    rotation_vector_1 = np.array([[0.0], [0.0], [0.0]]),
-    translation_vector_1 = np.array([[0.0], [0.0], [0.0]]),
-    distance_between_cameras = 1.0):
+        image_points_1,
+        image_points_2,
+        camera_matrix,
+        relative_rotation_vector,
+        relative_translation_vector,
+        rotation_vector_1=np.array([[0.0], [0.0], [0.0]]),
+        translation_vector_1=np.array([[0.0], [0.0], [0.0]]),
+        distance_between_cameras=1.0):
     image_points_1 = np.asarray(image_points_1)
     image_points_2 = np.asarray(image_points_2)
     camera_matrix = np.asarray(camera_matrix)
@@ -460,12 +488,12 @@ def reconstruct_object_points_from_relative_camera_pose(
     rotation_vector_1 = np.asarray(rotation_vector_1)
     translation_vector_1 = np.asarray(translation_vector_1)
     if image_points_1.size == 0 or image_points_2.size == 0:
-        return np.zeros((0,3))
+        return np.zeros((0, 3))
     image_points_1 = image_points_1.reshape((-1, 2))
     image_points_2 = image_points_2.reshape((-1, 2))
     if image_points_1.shape != image_points_2.shape:
         raise ValueError('Sets of image points do not appear to be the same shape')
-    camera_matrix = camera_matrix.reshape((3,3))
+    camera_matrix = camera_matrix.reshape((3, 3))
     relative_rotation_vector = relative_rotation_vector.reshape(3)
     relative_translation_vector = relative_translation_vector.reshape(3)
     rotation_vector_1 = rotation_vector_1.reshape(3)
@@ -474,7 +502,7 @@ def reconstruct_object_points_from_relative_camera_pose(
         rotation_vector_1,
         translation_vector_1,
         relative_rotation_vector,
-        relative_translation_vector*distance_between_cameras)[:2]
+        relative_translation_vector * distance_between_cameras)[:2]
     object_points = reconstruct_object_points_from_camera_poses(
         image_points_1,
         image_points_2,
@@ -485,25 +513,26 @@ def reconstruct_object_points_from_relative_camera_pose(
         translation_vector_2)
     return object_points
 
+
 def reconstruct_object_points_from_image_points(
-    image_points_1,
-    image_points_2,
-    camera_matrix,
-    rotation_vector_1 = np.array([[0.0], [0.0], [0.0]]),
-    translation_vector_1 = np.array([[0.0], [0.0], [0.0]]),
-    distance_between_cameras = 1.0):
+        image_points_1,
+        image_points_2,
+        camera_matrix,
+        rotation_vector_1=np.array([[0.0], [0.0], [0.0]]),
+        translation_vector_1=np.array([[0.0], [0.0], [0.0]]),
+        distance_between_cameras=1.0):
     image_points_1 = np.asarray(image_points_1)
     image_points_2 = np.asarray(image_points_2)
     camera_matrix = np.asarray(camera_matrix)
     rotation_vector_1 = np.asarray(rotation_vector_1)
     translation_vector_1 = np.asarray(translation_vector_1)
     if image_points_1.size == 0 or image_points_2.size == 0:
-        return np.zeros((0,3))
+        return np.zeros((0, 3))
     image_points_1 = image_points_1.reshape((-1, 2))
     image_points_2 = image_points_2.reshape((-1, 2))
     if image_points_1.shape != image_points_2.shape:
         raise ValueError('Sets of image points do not appear to be the same shape')
-    camera_matrix = camera_matrix.reshape((3,3))
+    camera_matrix = camera_matrix.reshape((3, 3))
     rotation_vector_1 = rotation_vector_1.reshape(3)
     translation_vector_1 = translation_vector_1.reshape(3)
     rotation_vector_2, translation_vector_2 = estimate_camera_pose_from_image_points(
@@ -523,19 +552,20 @@ def reconstruct_object_points_from_image_points(
         translation_vector_2)
     return object_points
 
+
 def estimate_camera_pose_from_plane_object_points(
-    input_object_points,
-    height,
-    origin_index,
-    x_axis_index,
-    y_reference_point,
-    y_reference_point_sign,
-    distance_calibration_indices,
-    calibration_distance):
+        input_object_points,
+        height,
+        origin_index,
+        x_axis_index,
+        y_reference_point,
+        y_reference_point_sign,
+        distance_calibration_indices,
+        calibration_distance):
     input_object_points = np.asarray(input_object_points)
     if input_object_points.size == 0:
         raise ValueError('Obect point array appears to be empty')
-    input_object_points = input_object_points.reshape((-1,3))
+    input_object_points = input_object_points.reshape((-1, 3))
 
     scale_factor = np.divide(
         calibration_distance,
@@ -568,8 +598,8 @@ def estimate_camera_pose_from_plane_object_points(
 
     rotation_x_rotation_y_a_norm = np.linalg.norm([rotation_x_a, rotation_y_a])
 
-    rotation_x_b = rotation_x_a * ((rotation_x_rotation_y_a_norm + np.pi)/rotation_x_rotation_y_a_norm)
-    rotation_y_b = rotation_y_a * ((rotation_x_rotation_y_a_norm + np.pi)/rotation_x_rotation_y_a_norm)
+    rotation_x_b = rotation_x_a * ((rotation_x_rotation_y_a_norm + np.pi) / rotation_x_rotation_y_a_norm)
+    rotation_y_b = rotation_y_a * ((rotation_x_rotation_y_a_norm + np.pi) / rotation_x_rotation_y_a_norm)
     translation_z_b = - translation_z_a
 
     rotation_vector_2_a = np.array([rotation_x_a, rotation_y_a, 0.0])
@@ -651,17 +681,18 @@ def estimate_camera_pose_from_plane_object_points(
 
     return camera_rotation_vector, camera_translation_vector, scale_factor, object_points_4
 
+
 def estimate_camera_poses_from_plane_image_points(
-    image_points_1,
-    image_points_2,
-    camera_matrix,
-    height,
-    origin_index,
-    x_axis_index,
-    y_reference_point,
-    y_reference_point_sign,
-    distance_calibration_indices,
-    calibration_distance):
+        image_points_1,
+        image_points_2,
+        camera_matrix,
+        height,
+        origin_index,
+        x_axis_index,
+        y_reference_point,
+        y_reference_point_sign,
+        distance_calibration_indices,
+        calibration_distance):
     image_points_1 = np.asarray(image_points_1)
     image_points_2 = np.asarray(image_points_2)
     camera_matrix = np.asarray(camera_matrix)
@@ -671,7 +702,7 @@ def estimate_camera_poses_from_plane_image_points(
     image_points_2 = image_points_2.reshape((-1, 2))
     if image_points_1.shape != image_points_2.shape:
         raise ValueError('Sets of image points do not appear to be the same shape')
-    camera_matrix = camera_matrix.reshape((3,3))
+    camera_matrix = camera_matrix.reshape((3, 3))
     relative_rotation_vector, relative_translation_vector = estimate_camera_pose_from_image_points(
         image_points_1,
         image_points_2,
@@ -693,12 +724,13 @@ def estimate_camera_poses_from_plane_image_points(
         rotation_vector_1,
         translation_vector_1,
         relative_rotation_vector,
-        relative_translation_vector*scale_factor)
+        relative_translation_vector * scale_factor)
     return rotation_vector_1, translation_vector_1, rotation_vector_2, translation_vector_2
 
+
 def draw_2d_image_points(
-    image_points,
-    point_labels=[]):
+        image_points,
+        point_labels=[]):
     image_points = np.asarray(image_points).reshape((-1, 2))
     points_image_u = image_points[:, 0]
     points_image_v = image_points[:, 1]
@@ -710,9 +742,10 @@ def draw_2d_image_points(
         for i in range(len(point_labels)):
             plt.text(points_image_u[i], points_image_v[i], point_labels[i])
 
+
 def format_2d_image_plot(
-    image_size=None,
-    show_axes=True):
+        image_size=None,
+        show_axes=True):
     if image_size is not None:
         plt.xlim(0, image_size[0])
         plt.ylim(0, image_size[1])
@@ -726,11 +759,12 @@ def format_2d_image_plot(
     plt.gca().invert_yaxis()
     plt.gca().set_aspect('equal')
 
+
 def plot_2d_image_points(
-    image_points,
-    image_size=None,
-    point_labels=[],
-    show_axes=True):
+        image_points,
+        image_size=None,
+        point_labels=[],
+        show_axes=True):
     image_points = np.asarray(image_points).reshape((-1, 2))
     draw_2d_image_points(
         image_points,
@@ -738,9 +772,10 @@ def plot_2d_image_points(
     format_2d_image_plot(image_size, show_axes)
     plt.show()
 
+
 def draw_3d_object_points_topdown(
-    object_points,
-    point_labels=[]):
+        object_points,
+        point_labels=[]):
     object_points = np.asarray(object_points).reshape((-1, 3))
     points_x = object_points[:, 0]
     points_y = object_points[:, 1]
@@ -752,8 +787,9 @@ def draw_3d_object_points_topdown(
         for i in range(len(point_labels)):
             plt.text(points_x[i], points_y[i], point_labels[i])
 
+
 def format_3d_topdown_plot(
-    room_corners = None):
+        room_corners=None):
     if room_corners is not None:
         plt.xlim(room_corners[0][0], room_corners[1][0])
         plt.ylim(room_corners[0][1], room_corners[1][1])
@@ -761,10 +797,11 @@ def format_3d_topdown_plot(
     plt.ylabel(r'$y$')
     plt.gca().set_aspect('equal')
 
+
 def plot_3d_object_points_topdown(
-    object_points,
-    room_corners = None,
-    point_labels=[]):
+        object_points,
+        room_corners=None,
+        point_labels=[]):
     object_points = np.asarray(object_points).reshape((-1, 3))
     draw_3d_object_points_topdown(
         object_points,
