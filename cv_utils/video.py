@@ -67,8 +67,8 @@ class VideoParameters:
         frame_height=None,
         fps=None,
         frame_count=None,
-        four_cc_int=None,
-        time_index=None
+        four_cc_int=None
+        # time_index=None
     ):
         self.start_time=None
         self.frame_width = None
@@ -110,13 +110,13 @@ class VideoParameters:
                 self.four_cc_int = int(four_cc_int)
             except:
                 raise ValueError('FourCC code must be convertible to integer')
-        if time_index is not None:
-            try:
-                self.time_index = [timestamp.astimezone(datetime.timezone.utc) for timestamp in time_index]
-            except:
-                try:
-                    self.time_index = [datetime.fromisoformat(timestamp).astimezone(datetime.timezone.utc) for timestamp in time_index]
-                except:
-                    raise ValueError('Cannot parse time index')
-        if self.time_index is None and self.start_time is not None and self.fps is not None and self.frame_count is not None:
-            self.time_index = [self.start_time + index*datetime.timedelta(microseconds = int(10**6/self.fps)) for index in range(self.frame_count)]
+        # if time_index is not None:
+        #     try:
+        #         self.time_index = [timestamp.astimezone(datetime.timezone.utc) for timestamp in time_index]
+        #     except:
+        #         try:
+        #             self.time_index = [datetime.fromisoformat(timestamp).astimezone(datetime.timezone.utc) for timestamp in time_index]
+        #         except:
+        #             raise ValueError('Cannot parse time index')
+        # if self.time_index is None and self.start_time is not None and self.fps is not None and self.frame_count is not None:
+        #     self.time_index = [self.start_time + index*datetime.timedelta(microseconds = int(10**6/self.fps)) for index in range(self.frame_count)]
