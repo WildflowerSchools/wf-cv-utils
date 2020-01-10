@@ -3,6 +3,7 @@ import cv_utils.color
 import numpy as np
 import math
 
+
 MARKER_DICT = {
     '+': cv.MARKER_CROSS,
     'x': cv.MARKER_TILTED_CROSS,
@@ -12,6 +13,7 @@ MARKER_DICT = {
     '^': cv.MARKER_TRIANGLE_UP,
     'v': cv.MARKER_TRIANGLE_DOWN
 }
+
 
 def draw_circle(
     original_image,
@@ -27,7 +29,7 @@ def draw_circle(
         if abs(coordinate) > 2**30:
             return original_image
     color_bgr = cv_utils.color.hex_to_bgr(color)
-    thickness=math.ceil(line_width)
+    thickness = math.ceil(line_width)
     if fill:
         thickness = cv.FILLED
     overlay_image = original_image.copy()
@@ -48,6 +50,7 @@ def draw_circle(
         0
     )
     return new_image
+
 
 def draw_line(
     original_image,
@@ -83,6 +86,7 @@ def draw_line(
     )
     return new_image
 
+
 def draw_text(
     original_image,
     coordinates,
@@ -99,7 +103,7 @@ def draw_text(
         if abs(coordinate) > 2**30:
             return original_image
     color_bgr = cv_utils.color.hex_to_bgr(color)
-    thickness=math.ceil(line_width)
+    thickness = math.ceil(line_width)
     text_box_size, baseline = cv.getTextSize(
         text=text,
         fontFace=font_face,
@@ -110,7 +114,7 @@ def draw_text(
     if horizontal_alignment == 'left':
         org_u = coordinates[0]
     elif horizontal_alignment == 'center':
-        org_u = coordinates[0] - text_box_width/2
+        org_u = coordinates[0] - text_box_width / 2
     elif horizontal_alignment == 'right':
         org_u = coordinates[0] - text_box_width
     else:
@@ -118,7 +122,7 @@ def draw_text(
     if vertical_alignment == 'top':
         org_v = coordinates[1] + text_box_height
     elif vertical_alignment == 'middle':
-        org_v = coordinates[1] + text_box_height/2
+        org_v = coordinates[1] + text_box_height / 2
     elif vertical_alignment == 'bottom':
         org_v = coordinates[1]
     else:
@@ -143,6 +147,7 @@ def draw_text(
     )
     return new_image
 
+
 def draw_point(
     original_image,
     coordinates,
@@ -160,7 +165,7 @@ def draw_point(
         return draw_circle(
             original_image,
             coordinates,
-            radius=marker_size/2,
+            radius=marker_size / 2,
             color=color,
             fill=True,
             alpha=alpha
@@ -186,6 +191,7 @@ def draw_point(
     )
     return new_image
 
+
 def draw_rectangle(
     original_image,
     coordinates,
@@ -203,7 +209,7 @@ def draw_rectangle(
         if abs(coordinate) > 2**30:
             return original_image
     color_bgr = cv_utils.color.hex_to_bgr(color)
-    thickness=math.ceil(line_width)
+    thickness = math.ceil(line_width)
     if fill:
         thickness = cv.FILLED
     overlay_image = original_image.copy()
