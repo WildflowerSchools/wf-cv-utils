@@ -12,8 +12,12 @@ __all__ = ["Camera", "Point2D", "Point3D", "PointMapping", "AxisLabel", "Axis", 
 
 @attr.s
 class Camera:
+    cid: str = attr.ib()
     matrix: typing.List[typing.List[float]] = attr.ib()
     distortion_coefficients: typing.List[float] = attr.ib()
+    width: int = attr.ib()
+    height: int = attr.ib()
+    name: str = attr.ib()
 
     # @classmethod
     # def 
