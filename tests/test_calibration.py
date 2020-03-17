@@ -12,8 +12,8 @@ def test_camera_calibration():
             PointMapping(image=Point2D(x=399, y=1200), world=Point3D(x=1, y=3, z=0)),
             PointMapping(image=Point2D(x=1401, y=1301), world=Point3D(x=4, y=1, z=0)),
         ]
-    calibration = camera.calibrate(mappings)
-    print(calibration)
+    retval, calibration = camera.calibrate(mappings)
     assert calibration is not None
     assert calibration['rotationVector'] is not None
     assert calibration['translationVector'] is not None
+    assert retval == True
