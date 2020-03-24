@@ -13,6 +13,7 @@ import numpy as np
 class Point2D:
     x: float = attr.ib()
     y: float = attr.ib()
+    id3d: int = attr.ib()
 
     def to_tuple(self):
         return (self.x, self.y)
