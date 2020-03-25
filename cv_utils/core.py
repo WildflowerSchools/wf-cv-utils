@@ -302,6 +302,31 @@ def generate_projection_matrix(
             axis=1))
     return(projection_matrix)
 
+def ground_grid(
+    image_width,
+    image_height,
+    rotation_vector,
+    translation_vector,
+    camera_matrix,
+    distortion_coefficients=np.array([0.0, 0.0, 0.0, 0.0]),
+    fill_image=False,
+    num_points=10
+):
+    grid_corners = ground_rectangle(
+        image_width=image_width,
+        image_height=image_height,
+        rotation_vector=rotation_vector,
+        translation_vector=translation_vector,
+        camera_matrix=camera_matrix,
+        distortion_coefficients=distortion_coefficients,
+        fill_image=fill_image
+    )
+    grid_points = generate_ground_grid(
+        grid_corners=grid_corners,
+        num_points=num_points
+    )
+    return grid_points    
+
 def ground_rectangle(
     image_width,
     image_height,
