@@ -382,6 +382,18 @@ def ground_rectangle(
         [x_max, y_max]
     ])
 
+def generate_ground_grid(
+    grid_corners,
+    num_points
+):
+    x_grid, y_grid = np.meshgrid(
+    np.linspace(grid_corners[0, 0], grid_corners[1, 0], num_points),
+    np.linspace(grid_corners[0, 1], grid_corners[1, 1], num_points)
+    )
+    grid = np.stack((x_grid, y_grid, np.full_like(x_grid, 0.0)), axis=-1)
+    points = grid.reshape((num_points**2, 3))
+    return points
+
 def project_points(
         object_points,
         rotation_vector,
