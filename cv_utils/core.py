@@ -307,7 +307,7 @@ def ground_point(
     rotation_vector,
     translation_vector,
     camera_matrix,
-    distortion_coefficients=np.array([0.0, 0.0, 0.0, 0.0]),
+    distortion_coefficients=np.array([0.0, 0.0, 0.0, 0.0])
 ):
     image_point = np.asarray(image_point)
     rotation_vector = np.asarray(rotation_vector)
