@@ -341,6 +341,47 @@ def ground_point(
     ground_point = camera_position + theta*camera_direction
     return ground_point
 
+def ground_rectangle(
+    image_width,
+    image_height,
+    rotation_vector,
+    translation_vector,
+    camera_matrix,
+    distortion_coefficients=np.array([0.0, 0.0, 0.0, 0.0]),
+    fill_image=False
+):
+    image_points = np.array([
+        [0.0, 0.0],
+        [image_width, 0.0],
+        [image_width, image_height],
+        [0.0, image_height]
+    ])
+    ground_points=np.empty((4, 3))
+    for i in range(4):
+        ground_points[i] = ground_point(
+            image_point=image_points[i],
+            rotation_vector=rotation_vector,
+            translation_vector=translation_vector,
+            camera_matrix=camera_matrix,
+            distortion_coefficients=distortion_coefficients
+        )
+    x_values_sorted = np.sort(ground_points[:, 0])
+    y_values_sorted = np.sort(ground_points[:, 1])
+    if fill_image:
+        x_min = x_values_sorted[0]
+        x_max = x_values_sorted[3]
+        y_min = y_values_sorted[0]
+        y_max = y_values_sorted[3]
+    else:
+        x_min = x_values_sorted[1]
+        x_max = x_values_sorted[2]
+        y_min = y_values_sorted[1]
+        y_max = y_values_sorted[2]
+    return np.array([
+        [x_min, y_min],
+        [x_max, y_max]
+    ])
+
 def project_points(
         object_points,
         rotation_vector,
