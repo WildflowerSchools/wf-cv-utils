@@ -302,45 +302,6 @@ def generate_projection_matrix(
             axis=1))
     return(projection_matrix)
 
-def ground_point(
-    image_point,
-    rotation_vector,
-    translation_vector,
-    camera_matrix,
-    distortion_coefficients=np.array([0.0, 0.0, 0.0, 0.0])
-):
-    image_point = np.asarray(image_point)
-    rotation_vector = np.asarray(rotation_vector)
-    translation_vector = np.asarray(translation_vector)
-    camera_matrix = np.asarray(camera_matrix)
-    distortion_coefficients = np.asarray(distortion_coefficients)
-    image_point = image_point.reshape((2))
-    rotation_vector = rotation_vector.reshape(3)
-    translation_vector = translation_vector.reshape(3)
-    camera_matrix = camera_matrix.reshape((3, 3))
-    image_point_undistorted = cv.undistortPoints(
-        image_point,
-        camera_matrix,
-        distortion_coefficients,
-        P=camera_matrix
-    )
-    image_point_undistorted = np.squeeze(image_point_undistorted)
-    camera_position = np.matmul(
-        cv.Rodrigues(-rotation_vector)[0],
-        -translation_vector.T
-        ).T
-    camera_point_homogeneous = np.matmul(
-        np.linalg.inv(camera_matrix),
-        np.array([image_point_undistorted[0], image_point_undistorted[1], 1.0]).T
-    ).T
-    camera_direction = np.matmul(
-        cv.Rodrigues(-rotation_vector)[0],
-        camera_point_homogeneous.T
-    ).T
-    theta = -camera_position[2]/camera_direction[2]
-    ground_point = camera_position + theta*camera_direction
-    return ground_point
-
 def ground_rectangle(
     image_width,
     image_height,
@@ -381,6 +342,45 @@ def ground_rectangle(
         [x_min, y_min],
         [x_max, y_max]
     ])
+
+def ground_point(
+    image_point,
+    rotation_vector,
+    translation_vector,
+    camera_matrix,
+    distortion_coefficients=np.array([0.0, 0.0, 0.0, 0.0])
+):
+    image_point = np.asarray(image_point)
+    rotation_vector = np.asarray(rotation_vector)
+    translation_vector = np.asarray(translation_vector)
+    camera_matrix = np.asarray(camera_matrix)
+    distortion_coefficients = np.asarray(distortion_coefficients)
+    image_point = image_point.reshape((2))
+    rotation_vector = rotation_vector.reshape(3)
+    translation_vector = translation_vector.reshape(3)
+    camera_matrix = camera_matrix.reshape((3, 3))
+    image_point_undistorted = cv.undistortPoints(
+        image_point,
+        camera_matrix,
+        distortion_coefficients,
+        P=camera_matrix
+    )
+    image_point_undistorted = np.squeeze(image_point_undistorted)
+    camera_position = np.matmul(
+        cv.Rodrigues(-rotation_vector)[0],
+        -translation_vector.T
+        ).T
+    camera_point_homogeneous = np.matmul(
+        np.linalg.inv(camera_matrix),
+        np.array([image_point_undistorted[0], image_point_undistorted[1], 1.0]).T
+    ).T
+    camera_direction = np.matmul(
+        cv.Rodrigues(-rotation_vector)[0],
+        camera_point_homogeneous.T
+    ).T
+    theta = -camera_position[2]/camera_direction[2]
+    ground_point = camera_position + theta*camera_direction
+    return ground_point
 
 def generate_ground_grid(
     grid_corners,
