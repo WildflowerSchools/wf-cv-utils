@@ -3,134 +3,8 @@ import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize
-import boto3
 import json
 import os
-
-
-# For now, the Wildflower-specific S3 functionality is intermingled with the more
-# general S3 functionality. We should probably separate these at some point. For
-# the S3 functions below to work, the environment must include AWS_ACCESS_KEY_ID and
-# AWS_SECRET_ACCESS_KEY variables and that access key must have read permissions
-# for the relevant buckets. You can set these environment variables manually or
-# by using the AWS CLI.
-classroom_data_wildflower_s3_bucket_name = 'wf-classroom-data'
-camera_image_wildflower_s3_directory_name = 'camera'
-
-
-# Generate the Wildflower S3 object name for a camera image from a classroom
-# name, a camera name, and a Python datetime object
-def generate_camera_image_wildflower_s3_object_name(
-        classroom_name,
-        camera_name,
-        datetime):
-    date_string, time_string = generate_wildflower_s3_datetime_strings(datetime)
-    camera_image_wildflower_s3_object_name = 'camera-{}/{}/{}/{}/still_{}-{}.jpg'.format(
-        classroom_name,
-        camera_image_wildflower_s3_directory_name,
-        date_string,
-        camera_name,
-        date_string,
-        time_string)
-    return camera_image_wildflower_s3_object_name
-
-
-# Generate date and time strings (as they appear in our Wildflower S3 object
-# names) from a Python datetime object
-def generate_wildflower_s3_datetime_strings(
-        datetime):
-    datetime_native_utc_naive = cv_datetime_utils.convert_to_native_utc_naive(datetime)
-    date_string = datetime_native_utc_naive.strftime('%Y-%m-%d')
-    time_string = datetime_native_utc_naive.strftime('%H-%M-%S')
-    return date_string, time_string
-
-
-def fetch_camera_calibration_data_from_local_drive_single_camera(
-        camera_name,
-        camera_calibration_data_directory='.'):
-    camera_calibration_data_filename = camera_name + '_cal.json'
-    camera_calibration_data_path = os.path.join(
-        camera_calibration_data_directory,
-        camera_calibration_data_filename)
-    with open(camera_calibration_data_path) as json_file:
-        camera_calibration_json_data_single_camera = json.load(json_file)
-    camera_calibration_data_single_camera = {
-        'camera_matrix': np.asarray(camera_calibration_json_data_single_camera['cameraMatrix']),
-        'distortion_coefficients': np.asarray(camera_calibration_json_data_single_camera['distortionCoefficients']),
-        'rotation_vector': np.asarray(camera_calibration_json_data_single_camera['rotationVector']),
-        'translation_vector': np.asarray(camera_calibration_json_data_single_camera['translationVector'])}
-    return camera_calibration_data_single_camera
-
-
-def fetch_camera_calibration_data_from_local_drive_multiple_cameras(
-        camera_names,
-        camera_calibration_data_directory='.'):
-    camera_calibration_data_multiple_cameras = []
-    for camera_name in camera_names:
-        camera_calibration_data_multiple_cameras.append(
-            fetch_camera_calibration_data_from_local_drive_single_camera(
-                camera_name,
-                camera_calibration_data_directory))
-    return camera_calibration_data_multiple_cameras
-
-
-# Fetch an image from a local image file and return it in OpenCV format
-def fetch_image_from_local_drive(image_path):
-    image = cv.imread(image_path)
-    return image
-
-
-# Fetch an image stored on S3 and specified by S3 bucket and object names and
-# return it in OpenCV format
-def fetch_image_from_s3_object(s3_bucket_name, s3_object_name):
-    s3_object = boto3.resource('s3').Object(s3_bucket_name, s3_object_name)
-    s3_object_content = s3_object.get()['Body'].read()
-    s3_object_content_array = np.frombuffer(s3_object_content, dtype=np.uint8)
-    image = cv.imdecode(s3_object_content_array, flags=cv.IMREAD_UNCHANGED)
-    return image
-
-
-# Fetch a camera image stored on S3 and specified by classroom name, camera
-# name, and Python datetime object and return it in OpenCV format
-def fetch_image_from_wildflower_s3(
-        classroom_name,
-        camera_name,
-        datetime):
-    s3_bucket_name = classroom_data_wildflower_s3_bucket_name
-    s3_object_name = generate_camera_image_wildflower_s3_object_name(
-        classroom_name,
-        camera_name,
-        datetime)
-    image = fetch_image_from_s3_object(s3_bucket_name, s3_object_name)
-    return image
-
-
-# Take an image in OpenCV format and draw it as a background for a Matplotlib
-# plot. We separate this from the plotting function below because we might want
-# to draw other elements before formatting and showing the chart.
-def draw_background_image(
-        image,
-        alpha=None):
-    if alpha is None:
-        alpha = 0.4
-    plt.imshow(cv.cvtColor(image, cv.COLOR_BGR2RGB), alpha=alpha)
-
-
-# Take an image in OpenCV format and plot it as a Matplotlib plot. Calls the
-# drawing function above, adds formating, and shows the plot.
-def plot_background_image(
-        image,
-        alpha=None,
-        show_axes=True):
-    if alpha is None:
-        alpha = 0.4
-    image_size = np.array([
-        image.shape[1],
-        image.shape[0]])
-    draw_background_image(image, alpha)
-    format_2d_image_plot(image_size, show_axes)
-    plt.show()
-
 
 def compose_transformations(
         rotation_vector_1,
@@ -302,31 +176,147 @@ def generate_projection_matrix(
             axis=1))
     return(projection_matrix)
 
+def ground_grid_camera_view(
+    image_width,
+    image_height,
+    rotation_vector,
+    translation_vector,
+    camera_matrix,
+    distortion_coefficients=np.array([0.0, 0.0, 0.0, 0.0]),
+    fill_image=False,
+    step=0.1
+):
+    grid_corners = ground_rectangle_camera_view(
+        image_width=image_width,
+        image_height=image_height,
+        rotation_vector=rotation_vector,
+        translation_vector=translation_vector,
+        camera_matrix=camera_matrix,
+        distortion_coefficients=distortion_coefficients,
+        fill_image=fill_image
+    )
+    grid_points = generate_ground_grid(
+        grid_corners=grid_corners,
+        step=step
+    )
+    return grid_points
 
-def project_points(
-        object_points,
-        rotation_vector,
-        translation_vector,
-        camera_matrix,
-        distortion_coefficients,
-        remove_behind_camera=False):
-    object_points = np.asarray(object_points)
+def ground_rectangle_camera_view(
+    image_width,
+    image_height,
+    rotation_vector,
+    translation_vector,
+    camera_matrix,
+    distortion_coefficients=np.array([0.0, 0.0, 0.0, 0.0]),
+    fill_image=False
+):
+    image_points = np.array([
+        [0.0, 0.0],
+        [image_width, 0.0],
+        [image_width, image_height],
+        [0.0, image_height]
+    ])
+    ground_points=np.empty((4, 3))
+    for i in range(4):
+        ground_points[i] = ground_point(
+            image_point=image_points[i],
+            rotation_vector=rotation_vector,
+            translation_vector=translation_vector,
+            camera_matrix=camera_matrix,
+            distortion_coefficients=distortion_coefficients
+        )
+    x_values_sorted = np.sort(ground_points[:, 0])
+    y_values_sorted = np.sort(ground_points[:, 1])
+    if fill_image:
+        x_min = x_values_sorted[0]
+        x_max = x_values_sorted[3]
+        y_min = y_values_sorted[0]
+        y_max = y_values_sorted[3]
+    else:
+        x_min = x_values_sorted[1]
+        x_max = x_values_sorted[2]
+        y_min = y_values_sorted[1]
+        y_max = y_values_sorted[2]
+    return np.array([
+        [x_min, y_min],
+        [x_max, y_max]
+    ])
+
+def ground_point(
+    image_point,
+    rotation_vector,
+    translation_vector,
+    camera_matrix,
+    distortion_coefficients=np.array([0.0, 0.0, 0.0, 0.0])
+):
+    image_point = np.asarray(image_point)
     rotation_vector = np.asarray(rotation_vector)
     translation_vector = np.asarray(translation_vector)
     camera_matrix = np.asarray(camera_matrix)
     distortion_coefficients = np.asarray(distortion_coefficients)
-    if object_points.size == 0:
-        return np.zeros((0, 2))
-    object_points = object_points.reshape((-1, 3))
+    image_point = image_point.reshape((2))
     rotation_vector = rotation_vector.reshape(3)
     translation_vector = translation_vector.reshape(3)
     camera_matrix = camera_matrix.reshape((3, 3))
+    image_point_undistorted = cv.undistortPoints(
+        image_point,
+        camera_matrix,
+        distortion_coefficients,
+        P=camera_matrix
+    )
+    image_point_undistorted = np.squeeze(image_point_undistorted)
+    camera_position = np.matmul(
+        cv.Rodrigues(-rotation_vector)[0],
+        -translation_vector.T
+        ).T
+    camera_point_homogeneous = np.matmul(
+        np.linalg.inv(camera_matrix),
+        np.array([image_point_undistorted[0], image_point_undistorted[1], 1.0]).T
+    ).T
+    camera_direction = np.matmul(
+        cv.Rodrigues(-rotation_vector)[0],
+        camera_point_homogeneous.T
+    ).T
+    theta = -camera_position[2]/camera_direction[2]
+    ground_point = camera_position + theta*camera_direction
+    return ground_point
+
+def generate_ground_grid(
+    grid_corners,
+    step=0.1
+):
+    x_grid, y_grid = np.meshgrid(
+    np.arange(grid_corners[0, 0], grid_corners[1, 0], step=step),
+    np.arange(grid_corners[0, 1], grid_corners[1, 1], step=step)
+    )
+    grid = np.stack((x_grid, y_grid, np.full_like(x_grid, 0.0)), axis=-1)
+    points = grid.reshape((-1, 3))
+    return points
+
+def project_points(
+    object_points,
+    rotation_vector,
+    translation_vector,
+    camera_matrix,
+    distortion_coefficients,
+    remove_behind_camera=False,
+    remove_outside_frame=False,
+    image_corners=None
+):
+    object_points = np.asarray(object_points).reshape((-1, 3))
+    rotation_vector = np.asarray(rotation_vector).reshape(3)
+    translation_vector = np.asarray(translation_vector).reshape(3)
+    camera_matrix = np.asarray(camera_matrix).reshape((3, 3))
+    distortion_coefficients = np.squeeze(np.asarray(distortion_coefficients))
+    if object_points.size == 0:
+        return np.zeros((0, 2))
     image_points = cv.projectPoints(
         object_points,
         rotation_vector,
         translation_vector,
         camera_matrix,
-        distortion_coefficients)[0]
+        distortion_coefficients
+    )[0]
     if remove_behind_camera:
         behind_camera_boolean = behind_camera(
             object_points,
@@ -334,9 +324,18 @@ def project_points(
             translation_vector
         )
         image_points[behind_camera_boolean] = np.array([np.nan, np.nan])
+    if remove_outside_frame:
+        outside_frame_boolean = outside_frame(
+            object_points,
+            rotation_vector,
+            translation_vector,
+            camera_matrix,
+            distortion_coefficients,
+            image_corners
+        )
+        image_points[outside_frame_boolean] = np.array([np.nan, np.nan])
     image_points = np.squeeze(image_points)
     return image_points
-
 
 def behind_camera(
         object_points,
@@ -361,6 +360,38 @@ def behind_camera(
         arr=object_points_transformed
     )
     return behind_camera_boolean
+
+def outside_frame(
+    object_points,
+    rotation_vector,
+    translation_vector,
+    camera_matrix,
+    distortion_coefficients,
+    image_corners
+):
+    object_points = np.asarray(object_points).reshape((-1, 3))
+    rotation_vector = np.asarray(rotation_vector)
+    translation_vector = np.asarray(translation_vector).reshape(3)
+    camera_matrix = np.asarray(camera_matrix).reshape((3,3))
+    distortion_coefficients = np.squeeze(np.asarray(distortion_coefficients))
+    image_corners = np.asarray(image_corners).reshape((2,2))
+    if object_points.size == 0:
+        return np.zeros((0, 2))
+    image_points = cv.projectPoints(
+        object_points,
+        rotation_vector,
+        translation_vector,
+        camera_matrix,
+        np.array([0.0, 0.0, 0.0, 0.0])
+    )[0]
+    image_points = image_points.reshape((-1, 2))
+    outside_frame_boolean = (
+        (image_points[:, 0] < image_corners[0, 0]) |
+        (image_points[:, 0] > image_corners[1, 0]) |
+        (image_points[:, 1] < image_corners[0, 1]) |
+        (image_points[:, 1] > image_corners[1, 1])
+    )
+    return outside_frame_boolean
 
 
 def undistort_points(
@@ -726,86 +757,3 @@ def estimate_camera_poses_from_plane_image_points(
         relative_rotation_vector,
         relative_translation_vector * scale_factor)
     return rotation_vector_1, translation_vector_1, rotation_vector_2, translation_vector_2
-
-
-def draw_2d_image_points(
-        image_points,
-        point_labels=[]):
-    image_points = np.asarray(image_points).reshape((-1, 2))
-    points_image_u = image_points[:, 0]
-    points_image_v = image_points[:, 1]
-    plt.plot(
-        points_image_u,
-        points_image_v,
-        '.')
-    if len(point_labels) > 0:
-        for i in range(len(point_labels)):
-            plt.text(points_image_u[i], points_image_v[i], point_labels[i])
-
-
-def format_2d_image_plot(
-        image_size=None,
-        show_axes=True):
-    if image_size is not None:
-        plt.xlim(0, image_size[0])
-        plt.ylim(0, image_size[1])
-    if show_axes:
-        plt.xlabel(r'$u$')
-        plt.ylabel(r'$v$')
-        plt.gca().xaxis.set_ticks_position('top')
-        plt.gca().xaxis.set_label_position('top')
-    else:
-        plt.axis('off')
-    plt.gca().invert_yaxis()
-    plt.gca().set_aspect('equal')
-
-
-def plot_2d_image_points(
-        image_points,
-        image_size=None,
-        point_labels=[],
-        show_axes=True):
-    image_points = np.asarray(image_points).reshape((-1, 2))
-    draw_2d_image_points(
-        image_points,
-        point_labels)
-    format_2d_image_plot(image_size, show_axes)
-    plt.show()
-
-
-def draw_3d_object_points_topdown(
-        object_points,
-        point_labels=[]):
-    object_points = np.asarray(object_points).reshape((-1, 3))
-    points_x = object_points[:, 0]
-    points_y = object_points[:, 1]
-    plt.plot(
-        points_x,
-        points_y,
-        '.')
-    if len(point_labels) > 0:
-        for i in range(len(point_labels)):
-            plt.text(points_x[i], points_y[i], point_labels[i])
-
-
-def format_3d_topdown_plot(
-        room_corners=None):
-    if room_corners is not None:
-        plt.xlim(room_corners[0][0], room_corners[1][0])
-        plt.ylim(room_corners[0][1], room_corners[1][1])
-    plt.xlabel(r'$x$')
-    plt.ylabel(r'$y$')
-    plt.gca().set_aspect('equal')
-
-
-def plot_3d_object_points_topdown(
-        object_points,
-        room_corners=None,
-        point_labels=[]):
-    object_points = np.asarray(object_points).reshape((-1, 3))
-    draw_3d_object_points_topdown(
-        object_points,
-        point_labels)
-    format_3d_topdown_plot(
-        room_corners)
-    plt.show()
