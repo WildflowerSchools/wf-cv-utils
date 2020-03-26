@@ -8,100 +8,9 @@ import json
 import os
 
 
-# For now, the Wildflower-specific S3 functionality is intermingled with the more
-# general S3 functionality. We should probably separate these at some point. For
-# the S3 functions below to work, the environment must include AWS_ACCESS_KEY_ID and
-# AWS_SECRET_ACCESS_KEY variables and that access key must have read permissions
-# for the relevant buckets. You can set these environment variables manually or
-# by using the AWS CLI.
-classroom_data_wildflower_s3_bucket_name = 'wf-classroom-data'
-camera_image_wildflower_s3_directory_name = 'camera'
-
-
-# Generate the Wildflower S3 object name for a camera image from a classroom
-# name, a camera name, and a Python datetime object
-def generate_camera_image_wildflower_s3_object_name(
-        classroom_name,
-        camera_name,
-        datetime):
-    date_string, time_string = generate_wildflower_s3_datetime_strings(datetime)
-    camera_image_wildflower_s3_object_name = 'camera-{}/{}/{}/{}/still_{}-{}.jpg'.format(
-        classroom_name,
-        camera_image_wildflower_s3_directory_name,
-        date_string,
-        camera_name,
-        date_string,
-        time_string)
-    return camera_image_wildflower_s3_object_name
-
-
-# Generate date and time strings (as they appear in our Wildflower S3 object
-# names) from a Python datetime object
-def generate_wildflower_s3_datetime_strings(
-        datetime):
-    datetime_native_utc_naive = cv_datetime_utils.convert_to_native_utc_naive(datetime)
-    date_string = datetime_native_utc_naive.strftime('%Y-%m-%d')
-    time_string = datetime_native_utc_naive.strftime('%H-%M-%S')
-    return date_string, time_string
-
-
-def fetch_camera_calibration_data_from_local_drive_single_camera(
-        camera_name,
-        camera_calibration_data_directory='.'):
-    camera_calibration_data_filename = camera_name + '_cal.json'
-    camera_calibration_data_path = os.path.join(
-        camera_calibration_data_directory,
-        camera_calibration_data_filename)
-    with open(camera_calibration_data_path) as json_file:
-        camera_calibration_json_data_single_camera = json.load(json_file)
-    camera_calibration_data_single_camera = {
-        'camera_matrix': np.asarray(camera_calibration_json_data_single_camera['cameraMatrix']),
-        'distortion_coefficients': np.asarray(camera_calibration_json_data_single_camera['distortionCoefficients']),
-        'rotation_vector': np.asarray(camera_calibration_json_data_single_camera['rotationVector']),
-        'translation_vector': np.asarray(camera_calibration_json_data_single_camera['translationVector'])}
-    return camera_calibration_data_single_camera
-
-
-def fetch_camera_calibration_data_from_local_drive_multiple_cameras(
-        camera_names,
-        camera_calibration_data_directory='.'):
-    camera_calibration_data_multiple_cameras = []
-    for camera_name in camera_names:
-        camera_calibration_data_multiple_cameras.append(
-            fetch_camera_calibration_data_from_local_drive_single_camera(
-                camera_name,
-                camera_calibration_data_directory))
-    return camera_calibration_data_multiple_cameras
-
-
 # Fetch an image from a local image file and return it in OpenCV format
 def fetch_image_from_local_drive(image_path):
     image = cv.imread(image_path)
-    return image
-
-
-# Fetch an image stored on S3 and specified by S3 bucket and object names and
-# return it in OpenCV format
-def fetch_image_from_s3_object(s3_bucket_name, s3_object_name):
-    s3_object = boto3.resource('s3').Object(s3_bucket_name, s3_object_name)
-    s3_object_content = s3_object.get()['Body'].read()
-    s3_object_content_array = np.frombuffer(s3_object_content, dtype=np.uint8)
-    image = cv.imdecode(s3_object_content_array, flags=cv.IMREAD_UNCHANGED)
-    return image
-
-
-# Fetch a camera image stored on S3 and specified by classroom name, camera
-# name, and Python datetime object and return it in OpenCV format
-def fetch_image_from_wildflower_s3(
-        classroom_name,
-        camera_name,
-        datetime):
-    s3_bucket_name = classroom_data_wildflower_s3_bucket_name
-    s3_object_name = generate_camera_image_wildflower_s3_object_name(
-        classroom_name,
-        camera_name,
-        datetime)
-    image = fetch_image_from_s3_object(s3_bucket_name, s3_object_name)
     return image
 
 
@@ -325,7 +234,7 @@ def ground_grid(
         grid_corners=grid_corners,
         num_points=num_points
     )
-    return grid_points    
+    return grid_points
 
 def ground_rectangle(
     image_width,
