@@ -191,7 +191,7 @@ def ground_grid(
     camera_matrix,
     distortion_coefficients=np.array([0.0, 0.0, 0.0, 0.0]),
     fill_image=False,
-    num_points=10
+    step=0.1
 ):
     grid_corners = ground_rectangle(
         image_width=image_width,
@@ -204,7 +204,7 @@ def ground_grid(
     )
     grid_points = generate_ground_grid(
         grid_corners=grid_corners,
-        num_points=num_points
+        step=step
     )
     return grid_points
 
@@ -290,14 +290,14 @@ def ground_point(
 
 def generate_ground_grid(
     grid_corners,
-    num_points
+    step=0.1
 ):
     x_grid, y_grid = np.meshgrid(
-    np.linspace(grid_corners[0, 0], grid_corners[1, 0], num_points),
-    np.linspace(grid_corners[0, 1], grid_corners[1, 1], num_points)
+    np.arange(grid_corners[0, 0], grid_corners[1, 0], step=step),
+    np.arange(grid_corners[0, 1], grid_corners[1, 1], step=step)
     )
     grid = np.stack((x_grid, y_grid, np.full_like(x_grid, 0.0)), axis=-1)
-    points = grid.reshape((num_points**2, 3))
+    points = grid.reshape((-1, 3))
     return points
 
 def project_points(
