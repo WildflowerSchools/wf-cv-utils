@@ -6,13 +6,6 @@ import scipy.optimize
 import json
 import os
 
-
-# Fetch an image from a local image file and return it in OpenCV format
-def fetch_image_from_local_drive(image_path):
-    image = cv.imread(image_path)
-    return image
-
-
 def compose_transformations(
         rotation_vector_1,
         translation_vector_1,
