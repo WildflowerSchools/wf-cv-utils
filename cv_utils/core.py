@@ -176,7 +176,7 @@ def generate_projection_matrix(
             axis=1))
     return(projection_matrix)
 
-def ground_grid(
+def ground_grid_camera_view(
     image_width,
     image_height,
     rotation_vector,
@@ -186,7 +186,7 @@ def ground_grid(
     fill_image=False,
     step=0.1
 ):
-    grid_corners = ground_rectangle(
+    grid_corners = ground_rectangle_camera_view(
         image_width=image_width,
         image_height=image_height,
         rotation_vector=rotation_vector,
@@ -201,7 +201,7 @@ def ground_grid(
     )
     return grid_points
 
-def ground_rectangle(
+def ground_rectangle_camera_view(
     image_width,
     image_height,
     rotation_vector,
