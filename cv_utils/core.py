@@ -294,29 +294,29 @@ def generate_ground_grid(
     return points
 
 def project_points(
-        object_points,
-        rotation_vector,
-        translation_vector,
-        camera_matrix,
-        distortion_coefficients,
-        remove_behind_camera=False):
-    object_points = np.asarray(object_points)
-    rotation_vector = np.asarray(rotation_vector)
-    translation_vector = np.asarray(translation_vector)
-    camera_matrix = np.asarray(camera_matrix)
-    distortion_coefficients = np.asarray(distortion_coefficients)
+    object_points,
+    rotation_vector,
+    translation_vector,
+    camera_matrix,
+    distortion_coefficients,
+    remove_behind_camera=False,
+    remove_outside_frame=False,
+    image_corners=None
+):
+    object_points = np.asarray(object_points).reshape((-1, 3))
+    rotation_vector = np.asarray(rotation_vector).reshape(3)
+    translation_vector = np.asarray(translation_vector).reshape(3)
+    camera_matrix = np.asarray(camera_matrix).reshape((3, 3))
+    distortion_coefficients = np.squeeze(np.asarray(distortion_coefficients))
     if object_points.size == 0:
         return np.zeros((0, 2))
-    object_points = object_points.reshape((-1, 3))
-    rotation_vector = rotation_vector.reshape(3)
-    translation_vector = translation_vector.reshape(3)
-    camera_matrix = camera_matrix.reshape((3, 3))
     image_points = cv.projectPoints(
         object_points,
         rotation_vector,
         translation_vector,
         camera_matrix,
-        distortion_coefficients)[0]
+        distortion_coefficients
+    )[0]
     if remove_behind_camera:
         behind_camera_boolean = behind_camera(
             object_points,
@@ -324,9 +324,18 @@ def project_points(
             translation_vector
         )
         image_points[behind_camera_boolean] = np.array([np.nan, np.nan])
+    if remove_outside_frame:
+        outside_frame_boolean = outside_frame(
+            object_points,
+            rotation_vector,
+            translation_vector,
+            camera_matrix,
+            distortion_coefficients,
+            image_corners
+        )
+        image_points[outside_frame_boolean] = np.array([np.nan, np.nan])
     image_points = np.squeeze(image_points)
     return image_points
-
 
 def behind_camera(
         object_points,
@@ -351,6 +360,38 @@ def behind_camera(
         arr=object_points_transformed
     )
     return behind_camera_boolean
+
+def outside_frame(
+    object_points,
+    rotation_vector,
+    translation_vector,
+    camera_matrix,
+    distortion_coefficients,
+    image_corners
+):
+    object_points = np.asarray(object_points).reshape((-1, 3))
+    rotation_vector = np.asarray(rotation_vector)
+    translation_vector = np.asarray(translation_vector).reshape(3)
+    camera_matrix = np.asarray(camera_matrix).reshape((3,3))
+    distortion_coefficients = np.squeeze(np.asarray(distortion_coefficients))
+    image_corners = np.asarray(image_corners).reshape((2,2))
+    if object_points.size == 0:
+        return np.zeros((0, 2))
+    image_points = cv.projectPoints(
+        object_points,
+        rotation_vector,
+        translation_vector,
+        camera_matrix,
+        np.array([0.0, 0.0, 0.0, 0.0])
+    )[0]
+    image_points = image_points.reshape((-1, 2))
+    outside_frame_boolean = (
+        (image_points[:, 0] < image_corners[0, 0]) |
+        (image_points[:, 0] > image_corners[1, 0]) |
+        (image_points[:, 1] < image_corners[0, 1]) |
+        (image_points[:, 1] > image_corners[1, 1])
+    )
+    return outside_frame_boolean
 
 
 def undistort_points(

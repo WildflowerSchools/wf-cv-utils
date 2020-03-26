@@ -8,11 +8,32 @@ def fetch_image_from_local_drive(image_path):
     return image
 
 def plot_2d_image_points(
-        image_points,
-        image_size=None,
-        point_labels=[],
-        show_axes=True):
+    image_points,
+    image=None,
+    image_path=None,
+    image_size=None,
+    image_alpha=None,
+    point_labels=[],
+    show_axes=True
+):
     image_points = np.asarray(image_points).reshape((-1, 2))
+    if image is not None or image_path is not None:
+        if image is not None and image_path is not None:
+            raise ValueError('Cannot specify both image and image path')
+        if image_path is not None:
+            image = fetch_image_from_local_drive(image_path)
+        if image_size is not None and (image_size[0] != image.shape[1] or image_size[1] != image.shape[0]):
+            raise ValueError('Specified image size is ({}, {}) but specified image has size ({}, {})'.format(
+                image_size[0],
+                image_size[1],
+                image.shape[1],
+                image.shape[0]
+            ))
+        image_size = np.array([image.shape[1], image.shape[0]])
+        draw_background_image(
+            image=image,
+            alpha=image_alpha
+        )
     draw_2d_image_points(
         image_points,
         point_labels)
