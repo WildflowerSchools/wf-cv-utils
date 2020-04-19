@@ -34,6 +34,14 @@ class VideoInput:
         else:
             return None
 
+    def get_frame_by_frame_number(self, frame_number):
+        self.capture_object.set(cv.CAP_PROP_POS_FRAMES, frame_number)
+        return self.get_frame()
+
+    def get_frame_by_milliseconds(self, milliseconds):
+        self.capture_object.set(cv.CAP_PROP_POS_MSEC, milliseconds)
+        return self.get_frame()
+
 
 class VideoOutput:
     def __init__(
