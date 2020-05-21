@@ -354,11 +354,7 @@ def behind_camera(
         rotation_vector,
         translation_vector
     )
-    behind_camera_boolean = np.apply_along_axis(
-        lambda point: point[2] <= 0,
-        axis=-1,
-        arr=object_points_transformed
-    )
+    behind_camera_boolean = (object_points_transformed <= 0)[..., 2]
     return behind_camera_boolean
 
 def outside_frame(
