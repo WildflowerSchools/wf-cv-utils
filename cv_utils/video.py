@@ -120,3 +120,9 @@ class VideoParameters:
                 self.four_cc_int = int(four_cc_int)
             except Exception as e:
                 raise ValueError('FourCC code must be convertible to integer')
+
+def four_cc_string_to_int(four_cc_string):
+    return cv.VideoWriter_fourcc(*four_cc_string)
+
+def four_cc_int_to_string(four_cc_int):
+    return "".join([chr((int(four_cc_int) >> 8 * i) & 0xFF) for i in range(4)])
