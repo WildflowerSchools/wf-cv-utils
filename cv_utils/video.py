@@ -18,7 +18,7 @@ class VideoInput:
             frame_height=self.capture_object.get(cv.CAP_PROP_FRAME_HEIGHT),
             fps=self.capture_object.get(cv.CAP_PROP_FPS),
             frame_count=self.capture_object.get(cv.CAP_PROP_FRAME_COUNT),
-            four_cc_int=self.capture_object.get(cv.CAP_PROP_FOURCC)
+            fourcc_int=self.capture_object.get(cv.CAP_PROP_FOURCC)
         )
 
     def is_opened(self):
@@ -52,7 +52,7 @@ class VideoOutput:
         self.video_parameters = video_parameters
         self.writer_object = cv.VideoWriter(
             output_path,
-            fourcc=self.video_parameters.four_cc_int,
+            fourcc=self.video_parameters.fourcc_int,
             fps=self.video_parameters.fps,
             frameSize=(
                 self.video_parameters.frame_width,
@@ -78,14 +78,14 @@ class VideoParameters:
         frame_height=None,
         fps=None,
         frame_count=None,
-        four_cc_int=None
+        fourcc_int=None
     ):
         self.start_time = None
         self.frame_width = None
         self.frame_height = None
         self.fps = None
         self.frame_count = None
-        self.four_cc_int = None
+        self.fourcc_int = None
         self.time_index = None
         if start_time is not None:
             try:
@@ -115,14 +115,14 @@ class VideoParameters:
                 self.frame_count = int(frame_count)
             except Exception as e:
                 raise ValueError('Frame count must be convertible to integer')
-        if four_cc_int is not None:
+        if fourcc_int is not None:
             try:
-                self.four_cc_int = int(four_cc_int)
+                self.fourcc_int = int(fourcc_int)
             except Exception as e:
                 raise ValueError('FourCC code must be convertible to integer')
 
-def four_cc_string_to_int(four_cc_string):
-    return cv.VideoWriter_fourcc(*four_cc_string)
+def fourcc_string_to_int(fourcc_string):
+    return cv.VideoWriter_fourcc(*fourcc_string)
 
-def four_cc_int_to_string(four_cc_int):
-    return "".join([chr((int(four_cc_int) >> 8 * i) & 0xFF) for i in range(4)])
+def fourcc_int_to_string(fourcc_int):
+    return "".join([chr((int(fourcc_int) >> 8 * i) & 0xFF) for i in range(4)])
