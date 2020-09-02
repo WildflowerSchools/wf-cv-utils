@@ -9,7 +9,8 @@ BASE_DEPENDENCIES = [
     'opencv-python>=3.4.1',
     'numpy>=1.14',
     'scipy>=1.1',
-    'matplotlib>=2.2'
+    'matplotlib>=2.2',
+    'attrs>=19.3.0'
 ]
 
 # allow setup.py to be run from any path
