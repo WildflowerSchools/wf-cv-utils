@@ -43,6 +43,13 @@ def fetch_colmap_image_data_local(path):
         axis=1
     )
     df['rotation_vector'] = df['quaternion_vector'].apply(cv_utils.core.quaternion_vector_to_rotation_vector)
+    df['position'] = df.apply(
+        lambda row: cv_utils.core.extract_camera_position(
+            row['rotation_vector'],
+            row['translation_vector']
+        ),
+        axis=1
+    )
     df['image_directory'] = df['image_path'].apply(lambda x: os.path.dirname(os.path.normpath(x))).astype('string')
     df['image_name'] = df['image_path'].apply(lambda x: os.path.splitext(os.path.basename(os.path.normpath(x)))[0]).astype('string')
     df['image_extension'] = df['image_path'].apply(
@@ -59,6 +66,30 @@ def fetch_colmap_image_data_local(path):
         'colmap_camera_id',
         'quaternion_vector',
         'rotation_vector',
-        'translation_vector'
+        'translation_vector',
+        'position'
+    ])
+    return df
+
+def fetch_colmap_reference_image_data_local(path):
+    df = pd.read_csv(
+        path,
+        header=None,
+        delim_whitespace=True,
+        names = ['image_path', 'x', 'y', 'z'],
+        dtype={
+            'image_path': 'string',
+            'x': 'float',
+            'y': 'float',
+            'z': 'float',
+        }
+    )
+    df['position_input'] = df.apply(
+        lambda row: np.array([row['x'], row['y'], row['z']]),
+        axis=1
+    )
+    df.set_index('image_path', inplace=True)
+    df = df.reindex(columns=[
+        'position_input'
     ])
     return df
