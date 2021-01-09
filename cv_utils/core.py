@@ -141,6 +141,11 @@ def extract_camera_position(
     camera_position = -np.squeeze(new_translation_vector)
     return camera_position
 
+def extract_camera_position_rotation_matrix(rotation_matrix, translation_vector):
+    rotation_matrix = np.asarray(rotation_matrix).reshape((3,3))
+    translation_vector = np.asarray(translation_vector).reshape(3)
+    position = np.matmul(rotation_matrix.T, -translation_vector.T)
+    return position
 
 def extract_camera_direction(
         rotation_vector,
