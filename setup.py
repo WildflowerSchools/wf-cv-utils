@@ -6,6 +6,7 @@ VERSION = open(os.path.join(BASEDIR, 'VERSION')).read().strip()
 
 BASE_DEPENDENCIES = [
     'wf-cv-datetime-utils>=0.1.0',
+    'wf-minimal-honeycomb-python>=0.6.0',
     'opencv-python>=3.4.1',
     'numpy>=1.14',
     'scipy>=1.1',

@@ -39,6 +39,30 @@ def invert_transformation(
     new_translation_vector = np.squeeze(new_translation_vector)
     return new_rotation_vector, new_translation_vector
 
+def quaternion_vector_to_rotation_vector(quaternion_vector):
+    quaternion_vector = np.asarray(quaternion_vector).reshape(4)
+    spatial_vector = quaternion_vector[1:]
+    qw = quaternion_vector[0]
+    spatial_vector_length = np.linalg.norm(spatial_vector)
+    unit_vector = spatial_vector/spatial_vector_length
+    theta = 2*np.arctan2(spatial_vector_length, qw)
+    rotation_vector = theta*unit_vector
+    return rotation_vector
+
+def quaternion_vector_to_rotation_matrix(quaternion_vector):
+    quaternion_tuple = tuple(np.asarray(quaternion_vector).reshape(4))
+    qw, qx, qy, qz = quaternion_tuple
+    R = np.array([
+        [qw**2 + qx**2 - qy**2 - qz**2, 2*(qx*qy - qw*qz), 2*(qw*qy + qx*qz)],
+        [2*(qx*qy + qw*qz), qw**2 - qx**2 + qy**2 - qz**2, 2*(qy*qz - qw*qx)],
+        [2*(qx*qz - qw*qy), 2*(qw*qx + qy*qz), qw**2 - qx**2 - qy**2 + qz**2]
+    ])
+    return R
+
+def rotation_vector_to_rotation_matrix(rotation_vector):
+    rotation_vector = np.asarray(rotation_vector).reshape(3)
+    rotation_matrix = cv.Rodrigues(rotation_vector)[0]
+    return rotation_matrix
 
 def transform_object_points(
         object_points,
@@ -117,6 +141,11 @@ def extract_camera_position(
     camera_position = -np.squeeze(new_translation_vector)
     return camera_position
 
+def extract_camera_position_rotation_matrix(rotation_matrix, translation_vector):
+    rotation_matrix = np.asarray(rotation_matrix).reshape((3,3))
+    translation_vector = np.asarray(translation_vector).reshape(3)
+    position = np.matmul(rotation_matrix.T, -translation_vector.T)
+    return position
 
 def extract_camera_direction(
         rotation_vector,
