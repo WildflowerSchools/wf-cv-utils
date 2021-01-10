@@ -2,6 +2,53 @@ import minimal_honeycomb
 import pandas as pd
 import re
 
+def write_intrinsic_calibration_data(
+    data,
+    start_datetime,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    intrinsic_calibration_data_df = data.reset_index().reindex(columns=[
+        'device_id',
+        'image_width',
+        'image_height',
+        'camera_matrix',
+        'distortion_coefficients'
+    ])
+    intrinsic_calibration_data_df.rename(columns={'device_id': 'device'}, inplace=True)
+    intrinsic_calibration_data_df['start'] = minimal_honeycomb.to_honeycomb_datetime(start_datetime)
+    intrinsic_calibration_data_df['camera_matrix'] = intrinsic_calibration_data_df['camera_matrix'].apply(lambda x: x.tolist())
+    intrinsic_calibration_data_df['distortion_coefficients'] = intrinsic_calibration_data_df['distortion_coefficients'].apply(lambda x: x.tolist())
+    records = intrinsic_calibration_data_df.to_dict(orient='records')
+    if client is None:
+        client = minimal_honeycomb.MinimalHoneycombClient(
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    result=client.bulk_mutation(
+        request_name='createIntrinsicCalibration',
+        arguments={
+            'intrinsicCalibration': {
+                'type': 'IntrinsicCalibrationInput',
+                'value': records
+            }
+        },
+        return_object=[
+            'intrinsic_calibration_id'
+        ]
+    )
+    ids = None
+    if len(result) > 0:
+        ids = [datum.get('intrinsic_calibration_id') for datum in result]
+    return ids
+
 def fetch_assignment_id_lookup(
     assignment_ids,
     client=None,
@@ -10,7 +57,6 @@ def fetch_assignment_id_lookup(
     audience=None,
     client_id=None,
     client_secret=None
-
 ):
     assignment_ids = list(assignment_ids)
     if client is None:
