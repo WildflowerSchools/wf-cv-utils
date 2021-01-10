@@ -49,6 +49,53 @@ def write_intrinsic_calibration_data(
         ids = [datum.get('intrinsic_calibration_id') for datum in result]
     return ids
 
+def write_extrinsic_calibration_data(
+    data,
+    start_datetime,
+    coordinate_space_id,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    extrinsic_calibration_data_df = data.reset_index().reindex(columns=[
+        'device_id',
+        'rotation_vector',
+        'translation_vector'
+    ])
+    extrinsic_calibration_data_df.rename(columns={'device_id': 'device'}, inplace=True)
+    extrinsic_calibration_data_df['start'] = minimal_honeycomb.to_honeycomb_datetime(start_datetime)
+    extrinsic_calibration_data_df['coordinate_space'] = coordinate_space_id
+    extrinsic_calibration_data_df['rotation_vector'] = extrinsic_calibration_data_df['rotation_vector'].apply(lambda x: x.tolist())
+    extrinsic_calibration_data_df['translation_vector'] = extrinsic_calibration_data_df['translation_vector'].apply(lambda x: x.tolist())
+    records = extrinsic_calibration_data_df.to_dict(orient='records')
+    if client is None:
+        client = minimal_honeycomb.MinimalHoneycombClient(
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    result=client.bulk_mutation(
+        request_name='createExtrinsicCalibration',
+        arguments={
+            'extrinsicCalibration': {
+                'type': 'ExtrinsicCalibrationInput',
+                'value': records
+            }
+        },
+        return_object=[
+            'extrinsic_calibration_id'
+        ]
+    )
+    ids = None
+    if len(result) > 0:
+        ids = [datum.get('extrinsic_calibration_id') for datum in result]
+    return ids
+
 def fetch_assignment_id_lookup(
     assignment_ids,
     client=None,
