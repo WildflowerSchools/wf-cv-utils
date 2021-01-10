@@ -71,6 +71,37 @@ def fetch_colmap_image_data_local(path):
     ])
     return df
 
+def fetch_colmap_camera_data_local(path):
+    cameras=list()
+    with open(path, 'r') as fp:
+        for line_index, line in enumerate(fp):
+            if len(line) == 0 or line[0] == '#':
+                continue
+            word_list = line.split()
+            if len(word_list) < 5:
+                raise ValueError('Line {} is shorter than expected: {}'.format(
+                    line_index,
+                    line
+                ))
+            camera = {
+                'colmap_camera_id': int(word_list[0]),
+                'colmap_camera_model': word_list[1],
+                'image_width': int(word_list[2]),
+                'image_height': int(word_list[3]),
+                'colmap_parameters': np.asarray([float(parameter_string) for parameter_string in word_list[4:]])
+            }
+            cameras.append(camera)
+    df = pd.DataFrame.from_records(cameras)
+    df = df.astype({
+        'colmap_camera_id': 'int',
+        'colmap_camera_model': 'string',
+        'image_width': 'int',
+        'image_height': 'int',
+        'colmap_parameters': 'object'
+    })
+    df.set_index('colmap_camera_id', inplace=True)
+    return df
+
 def fetch_colmap_reference_image_data_local(path):
     df = pd.read_csv(
         path,
