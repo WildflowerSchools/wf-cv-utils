@@ -3,6 +3,22 @@ import pandas as pd
 import numpy as np
 import os
 
+def fetch_colmap_output_data_local(
+    image_data_path,
+    camera_data_path=None,
+    ref_image_data_path=None
+):
+    df = fetch_colmap_image_data_local(image_data_path)
+    if camera_data_path is not None:
+        cameras_df = fetch_colmap_camera_data_local(camera_data_path)
+        df = df.join(cameras_df, on='colmap_camera_id')
+    if ref_image_data_path is not None:
+        ref_images_df = fetch_colmap_reference_image_data_local(ref_image_data_path)
+        df = df.join(ref_images_df, on='image_path')
+        df['position_error'] = df['position'] - df['position_input']
+        df['position_error_distance'] = df['position_error'].apply(np.linalg.norm)
+    return df
+
 def fetch_colmap_image_data_local(path):
     num_header_lines = 4
     with open(path) as fp:
