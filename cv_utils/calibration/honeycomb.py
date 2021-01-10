@@ -96,6 +96,54 @@ def write_extrinsic_calibration_data(
         ids = [datum.get('extrinsic_calibration_id') for datum in result]
     return ids
 
+def write_position_data(
+    data,
+    start_datetime,
+    coordinate_space_id,
+    assigned_type='DEVICE',
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    position_data_df = data.reset_index().reindex(columns=[
+        'device_id',
+        'position'
+    ])
+    position_data_df.rename(columns={'device_id': 'assigned'}, inplace=True)
+    position_data_df.rename(columns={'position': 'coordinates'}, inplace=True)
+    position_data_df['start'] = minimal_honeycomb.to_honeycomb_datetime(start_datetime)
+    position_data_df['assigned_type'] = assigned_type
+    position_data_df['coordinate_space'] = coordinate_space_id
+    position_data_df['coordinates'] = position_data_df['coordinates'].apply(lambda x: x.tolist())
+    records = position_data_df.to_dict(orient='records')
+    if client is None:
+        client = minimal_honeycomb.MinimalHoneycombClient(
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    result=client.bulk_mutation(
+        request_name='assignToPosition',
+        arguments={
+            'positionAssignment': {
+                'type': 'PositionAssignmentInput!',
+                'value': records
+            }
+        },
+        return_object=[
+            'position_assignment_id'
+        ]
+    )
+    ids = None
+    if len(result) > 0:
+        ids = [datum.get('position_assignment_id') for datum in result]
+    return ids
+
 def fetch_assignment_id_lookup(
     assignment_ids,
     client=None,
