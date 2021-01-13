@@ -162,8 +162,6 @@ def visualize_calibration(
                 device_object_points.shape
             ))
         logger.info('Fetched {} valid position assignments'.format(len(device_names)))
-        print(device_names)
-        print(device_object_points)
     logger.info('Fetching images')
     metadata = video_io.fetch_images(
         image_timestamps=[visualization_datetime],
