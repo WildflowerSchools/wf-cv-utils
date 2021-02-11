@@ -306,6 +306,7 @@ def visualize_calibration(
                 output_filename_extension
             )
             output_path = os.path.join(output_directory, output_filename)
+            os.makedirs(output_directory, exist_ok=True)
             cv2.imwrite(output_path, image)
 
 
