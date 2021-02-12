@@ -229,3 +229,35 @@ def draw_rectangle(
         0
     )
     return new_image
+
+def draw_polygon(
+    original_image,
+    vertices,
+    color='#00ff00',
+    alpha=1.0
+):
+    vertices = np.asarray(vertices)
+    num_vertices = vertices.shape[0]
+    if vertices.shape != (num_vertices, 2):
+        raise ValueError('Vertices must be of shape (num_vertices, 2)')
+    for vertex_index in range(num_vertices):
+        for coordinate_index in range(2):
+            vertices[vertex_index, coordinate_index] = int(round(vertices[vertex_index, coordinate_index]))
+    vertices = vertices.astype(int)
+    color_bgr = cv_utils.color.hex_to_bgr(color)
+    overlay_image = original_image.copy()
+    overlay_image = cv.fillConvexPoly(
+        img=overlay_image,
+        points=vertices,
+        color=color_bgr,
+        lineType=cv.LINE_AA,
+        shift=0
+    )
+    new_image = cv.addWeighted(
+        overlay_image,
+        alpha,
+        original_image,
+        1 - alpha,
+        0
+    )
+    return new_image
