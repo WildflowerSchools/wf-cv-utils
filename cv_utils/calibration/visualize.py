@@ -38,8 +38,6 @@ def visualize_calibration(
     device_label_line_width=2,
     device_label_color='#ff0000',
     device_label_alpha=1.0,
-    show=False,
-    save=True,
     local_image_directory='./images',
     image_filename_extension='png',
     local_video_directory='./videos',
@@ -67,24 +65,15 @@ def visualize_calibration(
         if environment_name is None:
             raise ValueError('Must specify either environment ID or environment name')
         logger.info('Environment ID not specified. Fetching environmnt ID for environment name {}'.format(environment_name))
-        result = client.bulk_query(
-            request_name='findEnvironments',
-            arguments={
-                'name': {
-                    'type': 'String',
-                    'value': environment_name
-                }
-            },
-            return_data=[
-                'environment_id'
-            ],
-            id_field_name='environment_id'
+        environment_id = cv_utils.calibration.honeycomb.fetch_environment_id(
+            environment_name=environment_name,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=Noclient_secretne
         )
-        if len(result) == 0:
-            raise ValueError('Environment {} not found'.format(environment_name))
-        if len(result) > 1:
-            raise ValueError('More than one environment found with name {}'.format(environment_name))
-        environment_id = result[0].get('environment_id')
     logger.info('Visualizing calibration for environment id {}'.format(environment_id))
     logger.info('Generating object points for grid')
     floor_grid_object_points = cv_utils.generate_floor_grid_object_points(
@@ -97,88 +86,23 @@ def visualize_calibration(
         floor_height
     )
     if mark_device_locations:
-        logger.info('Fetching device assignments to mark their locations')
-        result=client.bulk_query(
-            request_name='searchAssignments',
-            arguments={
-                'query': {
-                    'type': 'QueryExpression!',
-                    'value': {
-                        'operator': 'AND',
-                        'children': [
-                            {
-                                'field': 'environment',
-                                'operator': 'EQ',
-                                'value': environment_id
-                            },
-                            {
-                                'field': 'assigned_type',
-                                'operator': 'EQ',
-                                'value': 'DEVICE'
-                            }
-                        ]
-                    }
-                }
-            },
-            return_data=[
-                'assignment_id',
-                'start',
-                'end',
-                {'assigned': [
-                    {'... on Device': [
-                        'device_id',
-                        'name',
-                        'device_type',
-                        {'position_assignments': [
-                            'start',
-                            'end',
-                            {'coordinate_space': [
-                                'space_id'
-                            ]},
-                            'coordinates'
-                        ]}
-                    ]}
-                ]}
-            ],
-            id_field_name='assignment_id'
+        device_positions = cv_utils.calibration.honeycomb.fetch_device_positions(
+            environment_id=environment_id,
+            datetime=visualization_datetime,
+            device_types=marked_device_types,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
         )
-        logger.info('Fetched {} device assignments'.format(len(result)))
-        device_assignments = minimal_honeycomb.filter_assignments(
-            result,
-            start_time=visualization_datetime,
-            end_time=visualization_datetime
-        )
-        logger.info('{} of these device assignments are active at specified datetime'.format(len(device_assignments)))
-        device_assignments = list(filter(lambda x: x.get('assigned', {}).get('device_type') in marked_device_types, result))
-        logger.info('{} of these device assignments correspond to target device types'.format(len(device_assignments)))
         device_names = list()
         device_object_points = list()
-        for device_assignment in device_assignments:
-            device_id = device_assignment.get('assigned', {}).get('device_id')
-            device_name = device_assignment.get('assigned', {}).get('name')
-            if device_name is None:
-                logger.info('Device {} has no name. Skipping.'.format(device_id))
-                continue
-            position_assignments = device_assignment.get('assigned', {}).get('position_assignments')
-            if position_assignments is None:
-                continue
-            logger.info('Device {} has {} position assignments'.format(device_name, len(position_assignments)))
-            position_assignments = minimal_honeycomb.filter_assignments(
-                position_assignments,
-                start_time=visualization_datetime,
-                end_time=visualization_datetime
-            )
-            logger.info('{} of these position assignments are active at specified datetime'.format(len(position_assignments)))
-            for position_assignment in position_assignments:
-                device_names.append(device_name)
-                device_object_points.append(position_assignment.get('coordinates'))
+        for device_id, device_info in device_positions.items():
+            device_names.append(device_info['name'])
+            device_object_points.append(device_info['position'])
         device_object_points = np.asarray(device_object_points)
-        num_marked_devices = len(device_names)
-        if device_object_points.shape[0] != num_marked_devices:
-            raise ValueError('Found {} valid position assignments but resulting device object points has shape{}'.format(
-                num_marked_devices,
-                device_object_points.shape
-            ))
         logger.info('Fetched {} valid position assignments'.format(len(device_names)))
     logger.info('Fetching images')
     metadata = video_io.fetch_images(
@@ -197,77 +121,57 @@ def visualize_calibration(
         video_filename_extension=video_filename_extension
     )
     logger.info('Fetched {} images'.format(len(metadata)))
+    logger.info('Fetching camera calibrations')
+    camera_ids = [metadatum['device_id'] for metadatum in metadata]
+    camera_calibrations = cv_utils.calibration.honeycomb.fetch_camera_calibrations(
+        camera_ids=camera_ids,
+        start=visualization_datetime,
+        end=visualization_datetime,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Fetching camera names')
+    camera_names = cv_utils.calibration.honeycomb.fetch_camera_names(
+        camera_ids=camera_ids,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
     for metadatum in metadata:
         camera_device_id = metadatum.get('device_id')
-        logger.info('Visualizing calibration for camera device id {}'.format(camera_device_id))
-        logger.info('Fetching calibrating data')
-        result = client.bulk_query(
-            request_name='findIntrinsicCalibrations',
-            arguments={
-                'device': {
-                    'type': 'ID',
-                    'value': camera_device_id
-                }
-            },
-            return_data = [
-                'intrinsic_calibration_id',
-                'start',
-                'end',
-                'camera_matrix',
-                'distortion_coefficients',
-                'image_width',
-                'image_height'
-            ],
-            id_field_name='intrinsic_calibration_id'
-        )
-        intrinsic_calibration = minimal_honeycomb.extract_assignment(
-            assignments=result,
-            start_time=visualization_datetime,
-            end_time=visualization_datetime
-        )
-        result = client.bulk_query(
-            request_name='findExtrinsicCalibrations',
-            arguments={
-                'device': {
-                    'type': 'ID',
-                    'value': camera_device_id
-                }
-            },
-            return_data = [
-                'extrinsic_calibration_id',
-                'start',
-                'end',
-                'rotation_vector',
-                'translation_vector'
-            ],
-            id_field_name='extrinsic_calibration_id'
-        )
-        extrinsic_calibration = minimal_honeycomb.extract_assignment(
-            assignments=result,
-            start_time=visualization_datetime,
-            end_time=visualization_datetime
-        )
-        logger.info('Calculating image points from object points')
+        camera_name = camera_names[camera_device_id]
+        logger.info('Visualizing calibration for camera {}'.format(camera_name))
+        camera_calibration = camera_calibrations[camera_device_id]
         image_corners = np.array([
             [0.0, 0.0],
-            [float(intrinsic_calibration.get('image_width')), float(intrinsic_calibration.get('image_height'))]
+            [float(camera_calibration.get('image_width')), float(camera_calibration.get('image_height'))]
         ])
+        logger.info('Calculating image points from object points')
         floor_grid_image_points = cv_utils.core.project_points(
             object_points=floor_grid_object_points,
-            rotation_vector=extrinsic_calibration.get('rotation_vector'),
-            translation_vector=extrinsic_calibration.get('translation_vector'),
-            camera_matrix=intrinsic_calibration.get('camera_matrix'),
-            distortion_coefficients=intrinsic_calibration.get('distortion_coefficients'),
+            rotation_vector=camera_calibration.get('rotation_vector'),
+            translation_vector=camera_calibration.get('translation_vector'),
+            camera_matrix=camera_calibration.get('camera_matrix'),
+            distortion_coefficients=camera_calibration.get('distortion_coefficients'),
             remove_behind_camera=True,
             remove_outside_frame=True,
             image_corners=image_corners
         )
         grid_corner_image_points = cv_utils.core.project_points(
             object_points=grid_corner_object_points,
-            rotation_vector=extrinsic_calibration.get('rotation_vector'),
-            translation_vector=extrinsic_calibration.get('translation_vector'),
-            camera_matrix=intrinsic_calibration.get('camera_matrix'),
-            distortion_coefficients=intrinsic_calibration.get('distortion_coefficients'),
+            rotation_vector=camera_calibration.get('rotation_vector'),
+            translation_vector=camera_calibration.get('translation_vector'),
+            camera_matrix=camera_calibration.get('camera_matrix'),
+            distortion_coefficients=camera_calibration.get('distortion_coefficients'),
             remove_behind_camera=True,
             remove_outside_frame=True,
             image_corners=image_corners
@@ -275,10 +179,10 @@ def visualize_calibration(
         if mark_device_locations:
             device_image_points = cv_utils.core.project_points(
                 object_points=device_object_points,
-                rotation_vector=extrinsic_calibration.get('rotation_vector'),
-                translation_vector=extrinsic_calibration.get('translation_vector'),
-                camera_matrix=intrinsic_calibration.get('camera_matrix'),
-                distortion_coefficients=intrinsic_calibration.get('distortion_coefficients'),
+                rotation_vector=camera_calibration.get('rotation_vector'),
+                translation_vector=camera_calibration.get('translation_vector'),
+                camera_matrix=camera_calibration.get('camera_matrix'),
+                distortion_coefficients=camera_calibration.get('distortion_coefficients'),
                 remove_behind_camera=True,
                 remove_outside_frame=True,
                 image_corners=image_corners
@@ -322,21 +226,15 @@ def visualize_calibration(
                 color=device_label_color,
                 alpha=device_label_alpha
             )
-        if show:
-            logger.info('Showing visualization')
-            cv2.imshow(camera_device_id, image)
-            cv2.waitKey(1000)
-            cv2.destroyAllWindows()
-        if save:
-            logger.info('Saving visualization')
-            output_filename = 'calibration_{}_{}.{}'.format(
-                metadatum.get('device_id'),
-                visualization_datetime.astimezone(datetime.timezone.utc).strftime('%Y%m%d_%H%M%S_%f'),
-                output_filename_extension
-            )
-            output_path = os.path.join(output_directory, output_filename)
-            os.makedirs(output_directory, exist_ok=True)
-            cv2.imwrite(output_path, image)
+        logger.info('Saving visualization')
+        output_filename = 'calibration_{}_{}.{}'.format(
+            visualization_datetime.astimezone(datetime.timezone.utc).strftime('%Y%m%d_%H%M%S_%f'),
+            camera_name,
+            output_filename_extension
+        )
+        output_path = os.path.join(output_directory, output_filename)
+        os.makedirs(output_directory, exist_ok=True)
+        cv2.imwrite(output_path, image)
 
 def overlay_floor_lines(
     visualization_datetime,

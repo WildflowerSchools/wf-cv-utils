@@ -148,6 +148,143 @@ def write_position_data(
         ids = [datum.get('position_assignment_id') for datum in result]
     return ids
 
+def fetch_environment_id(
+    environment_name,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result = client.bulk_query(
+        request_name='findEnvironments',
+        arguments={
+            'name': {
+                'type': 'String',
+                'value': environment_name
+            }
+        },
+        return_data=[
+            'environment_id'
+        ],
+        id_field_name='environment_id'
+    )
+    if len(result) == 0:
+        raise ValueError('Environment {} not found'.format(environment_name))
+    if len(result) > 1:
+        raise ValueError('More than one environment found with name {}'.format(environment_name))
+    environment_id = result[0].get('environment_id')
+    return environment_id
+
+def fetch_device_positions(
+    environment_id,
+    datetime,
+    device_types,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result=client.bulk_query(
+        request_name='searchAssignments',
+        arguments={
+            'query': {
+                'type': 'QueryExpression!',
+                'value': {
+                    'operator': 'AND',
+                    'children': [
+                        {
+                            'field': 'environment',
+                            'operator': 'EQ',
+                            'value': environment_id
+                        },
+                        {
+                            'field': 'assigned_type',
+                            'operator': 'EQ',
+                            'value': 'DEVICE'
+                        }
+                    ]
+                }
+            }
+        },
+        return_data=[
+            'assignment_id',
+            'start',
+            'end',
+            {'assigned': [
+                {'... on Device': [
+                    'device_id',
+                    'name',
+                    'device_type',
+                    {'position_assignments': [
+                        'start',
+                        'end',
+                        {'coordinate_space': [
+                            'space_id'
+                        ]},
+                        'coordinates'
+                    ]}
+                ]}
+            ]}
+        ],
+        id_field_name='assignment_id'
+    )
+    logger.info('Fetched {} device assignments'.format(len(result)))
+    device_assignments = minimal_honeycomb.filter_assignments(
+        result,
+        start_time=datetime,
+        end_time=datetime
+    )
+    logger.info('{} of these device assignments are active at specified datetime'.format(len(device_assignments)))
+    device_assignments = list(filter(lambda x: x.get('assigned', {}).get('device_type') in device_types, result))
+    logger.info('{} of these device assignments correspond to target device types'.format(len(device_assignments)))
+    device_positions = dict()
+    for device_assignment in device_assignments:
+        device_id = device_assignment.get('assigned', {}).get('device_id')
+        device_name = device_assignment.get('assigned', {}).get('name')
+        if device_name is None:
+            logger.info('Device {} has no name. Skipping.'.format(device_id))
+            continue
+        position_assignments = device_assignment.get('assigned', {}).get('position_assignments')
+        if position_assignments is None:
+            continue
+        logger.info('Device {} has {} position assignments'.format(device_name, len(position_assignments)))
+        position_assignments = minimal_honeycomb.filter_assignments(
+            position_assignments,
+            start_time=datetime,
+            end_time=datetime
+        )
+        if len(position_assignments) > 1:
+            raise ValueError('Device {} has multiple position assignments at specified datetime'.format(device_name))
+        if len(position_assignments) == 0:
+            logger.info('Device {} has no position assignments at specified datetime'.format(device_name))
+            continue
+        position_assignment = position_assignments[0]
+        device_positions[device_id] = {
+            'name': device_name,
+            'position': position_assignment.get('coordinates')
+        }
+    return device_positions
+
 def fetch_assignment_id_lookup(
     assignment_ids,
     client=None,
