@@ -40,6 +40,10 @@ def visualize_calibration(
     device_label_alpha=1.0,
     show=False,
     save=True,
+    local_image_directory='./images',
+    image_filename_extension='png',
+    local_video_directory='./videos',
+    video_filename_extension='mp4',
     output_directory='./image_overlays',
     output_filename_extension='png',
     chunk_size=100,
@@ -179,7 +183,18 @@ def visualize_calibration(
     logger.info('Fetching images')
     metadata = video_io.fetch_images(
         image_timestamps=[visualization_datetime],
-        environment_id=environment_id
+        environment_id=environment_id,
+        chunk_size=chunk_size,
+        minimal_honeycomb_client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret,
+        local_image_directory=local_image_directory,
+        image_filename_extension=image_filename_extension,
+        local_video_directory=local_video_directory,
+        video_filename_extension=video_filename_extension
     )
     logger.info('Fetched {} images'.format(len(metadata)))
     for metadatum in metadata:
@@ -338,6 +353,10 @@ def overlay_floor_lines(
     line_point_line_width = 1,
     line_point_color='#00ff00',
     line_point_alpha=1.0,
+    local_image_directory='./images',
+    image_filename_extension='png',
+    local_video_directory='./videos',
+    video_filename_extension='mp4',
     output_directory='./image_overlays',
     output_filename_extension='png',
     chunk_size=100,
@@ -382,7 +401,18 @@ def overlay_floor_lines(
     logger.info('Fetching images')
     metadata = video_io.fetch_images(
         image_timestamps=[visualization_datetime],
-        environment_id=environment_id
+        environment_id=environment_id,
+        chunk_size=chunk_size,
+        minimal_honeycomb_client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret,
+        local_image_directory=local_image_directory,
+        image_filename_extension=image_filename_extension,
+        local_video_directory=local_video_directory,
+        video_filename_extension=video_filename_extension
     )
     logger.info('Fetched {} images'.format(len(metadata)))
     logger.info('Fetching camera calibrations')
