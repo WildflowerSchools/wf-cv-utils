@@ -1,7 +1,10 @@
 import cv_utils.core
 import pandas as pd
 import numpy as np
+import re
 import os
+
+CALIBRATION_DATA_RE = r'(?P<colmap_image_id>[0-9]+) (?P<qw>[-0-9.]+) (?P<qx>[-0-9.]+) (?P<qy>[-0-9.]+) (?P<qz>[-0-9.]+) (?P<tx>[-0-9.]+) (?P<ty>[-0-9.]+) (?P<tz>[-0-9.]+) (?P<colmap_camera_id>[0-9]+) (?P<image_path>.+)'
 
 def fetch_colmap_output_data_local(
     image_data_path,
@@ -291,3 +294,28 @@ def fetch_colmap_reference_image_data_local(path):
         'position_input'
     ])
     return df
+
+def extract_colmap_image_calibration_data(
+    input_path,
+    output_path
+):
+    output_lines = list()
+    with open(input_path, 'r') as fp:
+        for line in fp.readlines():
+            m = re.match(CALIBRATION_DATA_RE, line)
+            if m:
+                output_line = ','.join([
+                    m.group('colmap_image_id'),
+                    m.group('qw'),
+                    m.group('qx'),
+                    m.group('qy'),
+                    m.group('qz'),
+                    m.group('tx'),
+                    m.group('ty'),
+                    m.group('tz'),
+                    m.group('colmap_camera_id'),
+                    m.group('image_path')
+                ])
+                output_lines.append(output_line)
+    with open(output_path, 'w') as fp:
+        fp.write('\n'.join(output_lines))
