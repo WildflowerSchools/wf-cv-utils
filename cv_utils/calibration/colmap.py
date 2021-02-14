@@ -24,44 +24,29 @@ def fetch_colmap_output_data_local(
     return df
 
 def fetch_colmap_image_data_local(path):
-    num_header_lines = 4
-    with open(path) as fp:
-        num_lines = len(fp.readlines())
-    num_data_lines = num_lines - num_header_lines
-    if num_data_lines % 2 != 0:
-        raise ValueError('File does not have even number of data lines')
-    num_images = num_data_lines // 2
-    skiprows = (
-        list(range(num_header_lines)) +
-        [num_header_lines + image_index*2 + 1 for image_index in range(num_images)]
-    )
-    df = pd.read_csv(
-        path,
-        delim_whitespace=True,
-        header=None,
-        skiprows=skiprows,
-        names = ['colmap_image_id', 'qw', 'qx', 'qy', 'qz', 'tx', 'ty', 'tz', 'colmap_camera_id', 'image_path'],
-        dtype={
-            'colmap_image_id': 'int',
-            'qw': 'float',
-            'qx': 'float',
-            'qy': 'float',
-            'qz': 'float',
-            'tx': 'float',
-            'ty': 'float',
-            'tz': 'float',
-            'colmap_camera_id': 'int',
-            'image_path': 'string'
-        }
-    )
-    df['quaternion_vector'] = df.apply(
-        lambda row: np.asarray([row['qw'], row['qx'], row['qy'], row['qz']]),
-        axis=1
-    )
-    df['translation_vector'] = df.apply(
-        lambda row: np.asarray([row['tx'], row['ty'], row['tz']]),
-        axis=1
-    )
+    data_list = list()
+    with open(path, 'r') as fp:
+        for line in fp.readlines():
+            m = re.match(CALIBRATION_DATA_RE, line)
+            if m:
+                data_list.append({
+                    'colmap_image_id': int(m.group('colmap_image_id')),
+                    'quaternion_vector': np.asarray([
+                        float(m.group('qw')),
+                        float(m.group('qx')),
+                        float(m.group('qy')),
+                        float(m.group('qz'))
+                    ]),
+                    'translation_vector': np.asarray([
+                        float(m.group('tx')),
+                        float(m.group('ty')),
+                        float(m.group('tz'))
+                    ]),
+                    'colmap_camera_id': int(m.group('colmap_camera_id')),
+                    'image_path': m.group('image_path')
+
+                })
+    df = pd.DataFrame(data_list)
     df['rotation_vector'] = df['quaternion_vector'].apply(cv_utils.core.quaternion_vector_to_rotation_vector)
     df['position'] = df.apply(
         lambda row: cv_utils.core.extract_camera_position(
