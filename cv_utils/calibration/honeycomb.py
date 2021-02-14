@@ -285,6 +285,73 @@ def fetch_device_positions(
         }
     return device_positions
 
+def fetch_device_position(
+    device_id,
+    datetime,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result=client.bulk_query(
+        request_name='searchPositionAssignments',
+        arguments={
+            'query': {
+                'type': 'QueryExpression!',
+                'value': {
+                    'operator': 'AND',
+                    'children': [
+                        {
+                            'field': 'assigned',
+                            'operator': 'EQ',
+                            'value': device_id
+                        },
+                        {
+                            'field': 'start',
+                            'operator': 'LTE',
+                            'value': minimal_honeycomb.to_honeycomb_datetime(datetime)
+                        },
+                        {
+                            'operator': 'OR',
+                            'children': [
+                                {
+                                    'field': 'end',
+                                    'operator': 'GTE',
+                                    'value': minimal_honeycomb.to_honeycomb_datetime(datetime)
+                                },
+                                {
+                                    'field': 'end',
+                                    'operator': 'ISNULL'
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        return_data=[
+            'position_assignment_id',
+            'coordinates'
+        ],
+        id_field_name='position_assignment_id'
+    )
+    if len(result) == 0:
+        return None
+    if len(result) > 1:
+        raise ValueError('More than one position assignment consistent with specified device ID and time')
+    device_position = result[0].get('coordinates')
+    return device_position
+
 def fetch_assignment_id_lookup(
     assignment_ids,
     client=None,
