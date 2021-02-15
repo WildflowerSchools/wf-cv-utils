@@ -1,8 +1,13 @@
 import cv_utils.core
+import cv_utils.calibration.honeycomb
 import pandas as pd
 import numpy as np
 import re
 import os
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 CALIBRATION_DATA_RE = r'(?P<colmap_image_id>[0-9]+) (?P<qw>[-0-9.]+) (?P<qx>[-0-9.]+) (?P<qy>[-0-9.]+) (?P<qz>[-0-9.]+) (?P<tx>[-0-9.]+) (?P<ty>[-0-9.]+) (?P<tz>[-0-9.]+) (?P<colmap_camera_id>[0-9]+) (?P<image_path>.+)'
 
@@ -42,7 +47,14 @@ def fetch_colmap_output_data_local(
 def fetch_colmap_image_data_local(
     calibration_directory=None,
     calibration_identifier=None,
-    path=None
+    path=None,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
 ):
     if path is None:
         if calibration_directory is None or calibration_identifier is None:
@@ -90,11 +102,34 @@ def fetch_colmap_image_data_local(
         if len(os.path.splitext(os.path.basename(os.path.normpath(x)))[1]) > 1
         else None
     ).astype('string')
+    logger.info('Attempting to extract camera device IDs from image names')
+    df['device_id'] = df['image_name'].apply(cv_utils.calibration.honeycomb.extract_honeycomb_id).astype('object')
+    device_ids = df['device_id'].dropna().unique().tolist()
+    logger.info('Found {} device IDs among image names'.format(
+        len(device_ids)
+    ))
+    logger.info('Fetching camera names')
+    camera_names = cv_utils.calibration.honeycomb.fetch_camera_names(
+        camera_ids=device_ids,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    df = df.join(
+        pd.Series(camera_names, name='camera_name'),
+        on='device_id'
+    )
     df.set_index('colmap_image_id', inplace=True)
     df = df.reindex(columns=[
         'image_path',
         'image_directory',
         'image_name',
+        'device_id',
+        'camera_name',
         'image_extension',
         'colmap_camera_id',
         'quaternion_vector',
