@@ -7,23 +7,51 @@ import os
 CALIBRATION_DATA_RE = r'(?P<colmap_image_id>[0-9]+) (?P<qw>[-0-9.]+) (?P<qx>[-0-9.]+) (?P<qy>[-0-9.]+) (?P<qz>[-0-9.]+) (?P<tx>[-0-9.]+) (?P<ty>[-0-9.]+) (?P<tz>[-0-9.]+) (?P<colmap_camera_id>[0-9]+) (?P<image_path>.+)'
 
 def fetch_colmap_output_data_local(
-    image_data_path,
+    calibration_directory=None,
+    calibration_identifier=None,
+    image_data_path=None,
     camera_data_path=None,
     ref_image_data_path=None
 ):
-    df = fetch_colmap_image_data_local(image_data_path)
-    if camera_data_path is not None:
-        cameras_df = fetch_colmap_camera_data_local(camera_data_path)
-        df = df.join(cameras_df, on='colmap_camera_id')
-    if ref_image_data_path is not None:
-        ref_images_df = fetch_colmap_reference_image_data_local(ref_image_data_path)
-        df = df.join(ref_images_df, on='image_path')
-        df['image_path'] = df['image_path'].astype('string')
-        df['position_error'] = df['position'] - df['position_input']
-        df['position_error_distance'] = df['position_error'].apply(np.linalg.norm)
+    # Fetch COLMAP image output
+    df = fetch_colmap_image_data_local(
+        calibration_directory=calibration_directory,
+        calibration_identifier=calibration_identifier,
+        path=image_data_path
+    )
+    # Fetch COLMAP cameras output
+    cameras_df = fetch_colmap_camera_data_local(
+        calibration_directory=calibration_directory,
+        calibration_identifier=calibration_identifier,
+        path=camera_data_path
+    )
+    df = df.join(cameras_df, on='colmap_camera_id')
+    # Fetch COLMAP ref images input
+    ref_images_df = fetch_colmap_reference_image_data_local(
+        calibration_directory=calibration_directory,
+        calibration_identifier=calibration_identifier,
+        path=ref_image_data_path
+    )
+    df = df.join(ref_images_df, on='image_path')
+    # Calculate fields
+    df['image_path'] = df['image_path'].astype('string')
+    df['position_error'] = df['position'] - df['position_input']
+    df['position_error_distance'] = df['position_error'].apply(np.linalg.norm)
     return df
 
-def fetch_colmap_image_data_local(path):
+def fetch_colmap_image_data_local(
+    calibration_directory=None,
+    calibration_identifier=None,
+    path=None
+):
+    if path is None:
+        if calibration_directory is None or calibration_identifier is None:
+            raise ValueError('Must specify either image data path or calibration directory and calibration identifier')
+        path = os.path.join(
+            calibration_directory,
+            calibration_identifier,
+            'images.txt'
+        )
     data_list = list()
     with open(path, 'r') as fp:
         for line in fp.readlines():
@@ -76,7 +104,19 @@ def fetch_colmap_image_data_local(path):
     ])
     return df
 
-def fetch_colmap_camera_data_local(path):
+def fetch_colmap_camera_data_local(
+    calibration_directory=None,
+    calibration_identifier=None,
+    path=None
+):
+    if path is None:
+        if calibration_directory is None or calibration_identifier is None:
+            raise ValueError('Must specify either camera data path or calibration directory and calibration identifier')
+        path = os.path.join(
+            calibration_directory,
+            calibration_identifier,
+            'cameras.txt'
+        )
     cameras=list()
     with open(path, 'r') as fp:
         for line_index, line in enumerate(fp):
@@ -257,7 +297,21 @@ def colmap_parameters_to_opencv_parameters(colmap_parameters, colmap_camera_mode
     ])
     return camera_matrix, distortion_coefficients
 
-def fetch_colmap_reference_image_data_local(path):
+def fetch_colmap_reference_image_data_local(
+    calibration_directory=None,
+    calibration_identifier=None,
+    path=None
+):
+    if path is None:
+        if calibration_directory is None or calibration_identifier is None:
+            raise ValueError('Must specify either ref image data path or calibration directory and calibration identifier')
+        path = os.path.join(
+            calibration_directory,
+            calibration_identifier,
+            'ref_images_{}.txt'.format(
+                calibration_identifier
+            )
+        )
     df = pd.read_csv(
         path,
         header=None,
