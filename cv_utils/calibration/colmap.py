@@ -1,7 +1,9 @@
 import cv_utils.core
 import cv_utils.calibration.honeycomb
+import video_io
 import pandas as pd
 import numpy as np
+import shutil
 import re
 import os
 import logging
@@ -11,12 +13,145 @@ logger = logging.getLogger(__name__)
 
 CALIBRATION_DATA_RE = r'(?P<colmap_image_id>[0-9]+) (?P<qw>[-0-9.]+) (?P<qx>[-0-9.]+) (?P<qy>[-0-9.]+) (?P<qz>[-0-9.]+) (?P<tx>[-0-9.]+) (?P<ty>[-0-9.]+) (?P<tz>[-0-9.]+) (?P<colmap_camera_id>[0-9]+) (?P<image_path>.+)'
 
+def prepare_colmap_inputs(
+    calibration_directory=None,
+    calibration_identifier=None,
+    image_info_path=None,
+    images_directory_path=None,
+    ref_images_data_path=None,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None,
+    local_image_directory='./images',
+    image_filename_extension='png',
+    local_video_directory='./videos',
+    video_filename_extension='mp4'
+):
+    # Set input and output paths
+    if image_info_path is None:
+        if calibration_directory is None or calibration_identifier is None:
+            raise ValueError('Must specify either image info path or calibration directory and calibration identifier')
+        image_info_path = os.path.join(
+            calibration_directory,
+            calibration_identifier,
+            'image_info_{}.csv'.format(
+                calibration_identifier
+            )
+        )
+    if images_directory_path is None:
+        if calibration_directory is None or calibration_identifier is None:
+            raise ValueError('Must specify either image directory path or calibration directory and calibration identifier')
+        images_directory_path = os.path.join(
+            calibration_directory,
+            calibration_identifier,
+            'images_{}'.format(
+                calibration_identifier
+            )
+        )
+    if ref_images_data_path is None:
+        if calibration_directory is None or calibration_identifier is None:
+            raise ValueError('Must specify either ref image data path or calibration directory and calibration identifier')
+        ref_images_data_directory = os.path.join(
+            calibration_directory,
+            calibration_identifier
+        )
+        ref_images_data_filename = 'ref_images_{}.txt'.format(
+            calibration_identifier
+        )
+    else:
+        ref_images_data_directory = os.path.dirname(os.path.normpath(ref_images_data_path))
+        ref_images_data_filename = os.path.basename(os.path.normpath(ref_images_data_path))
+    # Fetch image info from CSV file
+    image_info_columns = [
+        'device_id',
+        'camera_type',
+        'image_timestamp'
+    ]
+    image_info_df = pd.read_csv(image_info_path)
+    if not set(image_info_columns).issubset(set(image_info_df.columns)):
+        raise ValueError('Image info CSV data must contain the following columns: {}'.format(
+            image_info_columns
+        ))
+    image_info_df['image_timestamp'] = pd.to_datetime(image_info_df['image_timestamp'])
+    ref_images_lines = list()
+    for index, camera in image_info_df.iterrows():
+        camera_device_id = camera['device_id']
+        image_timestamp = camera['image_timestamp']
+        camera_type = camera['camera_type']
+        image_metadata = video_io.fetch_images(
+            image_timestamps=[image_timestamp],
+            camera_device_ids=[camera_device_id],
+            chunk_size=chunk_size,
+            minimal_honeycomb_client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret,
+            local_image_directory=local_image_directory,
+            image_filename_extension=image_filename_extension,
+            local_video_directory=local_video_directory,
+            video_filename_extension=video_filename_extension
+        )
+        if len(image_metadata) > 1:
+            raise ValueError('More than one image returned for this camera and timestamp')
+        image_info = image_metadata[0]
+        source_path = image_info['image_local_path']
+        # Copy image file
+        output_directory = os.path.join(
+            images_directory_path,
+            camera_type
+        )
+        output_filename = '{}.{}'.format(
+            camera_device_id,
+            image_filename_extension
+        )
+        output_path = os.path.join(
+            output_directory,
+            output_filename
+        )
+        os.makedirs(output_directory, exist_ok=True)
+        shutil.copy2(source_path, output_path)
+        # Fetch camera position
+        position = cv_utils.calibration.honeycomb.fetch_device_position(
+            device_id=camera_device_id,
+            datetime=image_timestamp,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+        if position is not None:
+            ref_images_line = ' '.join([
+                os.path.join(
+                    camera_type,
+                    output_filename
+                ),
+                str(position[0]),
+                str(position[1]),
+                str(position[2])
+            ])
+            ref_images_lines.append(ref_images_line)
+    os.makedirs(ref_images_data_directory, exist_ok=True)
+    ref_images_path = os.path.join(
+        ref_images_data_directory,
+        ref_images_data_filename
+    )
+    with open(ref_images_path, 'w') as fp:
+        fp.write('\n'.join(ref_images_lines))
+
 def fetch_colmap_output_data_local(
     calibration_directory=None,
     calibration_identifier=None,
     image_data_path=None,
     camera_data_path=None,
-    ref_image_data_path=None
+    ref_images_data_path=None
 ):
     # Fetch COLMAP image output
     df = fetch_colmap_image_data_local(
@@ -35,7 +170,7 @@ def fetch_colmap_output_data_local(
     ref_images_df = fetch_colmap_reference_image_data_local(
         calibration_directory=calibration_directory,
         calibration_identifier=calibration_identifier,
-        path=ref_image_data_path
+        path=ref_images_data_path
     )
     df = df.join(ref_images_df, on='image_path')
     # Calculate fields
