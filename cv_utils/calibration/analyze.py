@@ -27,9 +27,9 @@ def compare_calibrations(
             rotation_vector_2=-old_calibrations[device_id]['rotation_vector'],
             translation_vector_2=np.array([0.0, 0.0, 0.0])
         )
-        angle_difference = np.linalg.norm(relative_rotation_vector)
-        angle_difference_degrees = angle_difference*360/(2*math.pi)
-        rotation_direction = relative_rotation_vector/angle_difference
+        orientation_difference_angle_radians = np.linalg.norm(relative_rotation_vector)
+        orientation_difference_angle_degrees = orientation_difference_angle_radians*360/(2*math.pi)
+        orientation_difference_direction = relative_rotation_vector/orientation_difference_angle_radians
         old_position = cv_utils.core.extract_camera_position(
             rotation_vector=old_calibrations[device_id]['rotation_vector'],
             translation_vector=old_calibrations[device_id]['translation_vector'],
@@ -39,13 +39,13 @@ def compare_calibrations(
             translation_vector=new_calibrations[device_id]['translation_vector'],
         )
         position_difference = new_position - old_position
-        distance = np.linalg.norm(position_difference)
-        translation_direction = position_difference/distance
+        position_difference_distance = np.linalg.norm(position_difference)
+        position_difference_direction = position_difference/position_difference_distance
         calibration_comparisons[device_id] = {
-            'angle_difference': angle_difference,
-            'angle_difference_degrees': angle_difference_degrees,
-            'rotation_direction': rotation_direction,
-            'distance': distance,
-            'translation_direction': translation_direction
+            'orientation_difference_angle_radians': orientation_difference_angle_radians,
+            'orientation_difference_angle_degrees': orientation_difference_angle_degrees,
+            'orientation_difference_direction': orientation_difference_direction,
+            'position_difference_distance': position_difference_distance,
+            'position_difference_direction': position_difference_direction
         }
     return calibration_comparisons

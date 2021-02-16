@@ -616,3 +616,39 @@ def extract_colmap_image_calibration_data(
                 output_lines.append(output_line)
     with open(output_path, 'w') as fp:
         fp.write('\n'.join(output_lines))
+
+def compare_colmap_calibration_to_existing(
+    colmap_output_df,
+    existing_calibration_time
+):
+    new_calibrations =(
+        colmap_output_df
+        .dropna(subset=['device_id'])
+        .reindex(columns=[
+            'device_id',
+            'camera_matrix',
+            'distortion_coefficients',
+            'image_width',
+            'image_height',
+            'rotation_vector',
+            'translation_vector'
+        ])
+        .set_index('device_id')
+        .to_dict(orient='index')
+    )
+    device_ids = list(new_calibrations.keys())
+    old_calibrations = cv_utils.fetch_camera_calibrations(
+        camera_ids=device_ids,
+        start=existing_calibration_time,
+        end=existing_calibration_time
+    )
+    calibration_comparisons = cv_utils.calibration.analyze.compare_calibrations(
+        old_calibrations=old_calibrations,
+        new_calibrations=new_calibrations
+    )
+    calibration_comparisons_df = pd.DataFrame.from_dict(
+        calibration_comparisons,
+        orient='index'
+    )
+    calibration_comparisons_df.index.name='camera_id'
+    return calibration_comparisons_df
