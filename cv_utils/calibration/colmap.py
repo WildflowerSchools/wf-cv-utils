@@ -105,9 +105,7 @@ def prepare_colmap_inputs(
         image_info_path = os.path.join(
             calibration_directory,
             calibration_identifier,
-            'image_info_{}.csv'.format(
-                calibration_identifier
-            )
+            'image_info.csv'
         )
     if images_directory_path is None:
         if calibration_directory is None or calibration_identifier is None:
@@ -115,9 +113,7 @@ def prepare_colmap_inputs(
         images_directory_path = os.path.join(
             calibration_directory,
             calibration_identifier,
-            'images_{}'.format(
-                calibration_identifier
-            )
+            'images'
         )
     if ref_images_data_path is None:
         if calibration_directory is None or calibration_identifier is None:
@@ -126,9 +122,7 @@ def prepare_colmap_inputs(
             calibration_directory,
             calibration_identifier
         )
-        ref_images_data_filename = 'ref_images_{}.txt'.format(
-            calibration_identifier
-        )
+        ref_images_data_filename = 'ref_images.txt'
     else:
         ref_images_data_directory = os.path.dirname(os.path.normpath(ref_images_data_path))
         ref_images_data_filename = os.path.basename(os.path.normpath(ref_images_data_path))
@@ -545,9 +539,7 @@ def fetch_colmap_reference_image_data_local(
         path = os.path.join(
             calibration_directory,
             calibration_identifier,
-            'ref_images_{}.txt'.format(
-                calibration_identifier
-            )
+            'ref_images.txt'
         )
     df = pd.read_csv(
         path,
