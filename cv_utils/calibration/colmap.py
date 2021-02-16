@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 CALIBRATION_DATA_RE = r'(?P<colmap_image_id>[0-9]+) (?P<qw>[-0-9.]+) (?P<qx>[-0-9.]+) (?P<qy>[-0-9.]+) (?P<qz>[-0-9.]+) (?P<tx>[-0-9.]+) (?P<ty>[-0-9.]+) (?P<tz>[-0-9.]+) (?P<colmap_camera_id>[0-9]+) (?P<image_path>.+)'
 
+RECOGNIZED_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif']
+
 def write_colmap_output_honeycomb(
     colmap_output_df,
     calibration_start,
@@ -86,6 +88,7 @@ def prepare_colmap_inputs(
     image_info_path=None,
     images_directory_path=None,
     ref_images_data_path=None,
+    additional_images=None,
     chunk_size=100,
     client=None,
     uri=None,
@@ -206,6 +209,32 @@ def prepare_colmap_inputs(
     )
     with open(ref_images_path, 'w') as fp:
         fp.write('\n'.join(ref_images_lines))
+    if additional_images is not None:
+        for camera_type, input_directory in additional_images.items():
+            # Copy image files
+            output_directory = os.path.join(
+                images_directory_path,
+                camera_type
+            )
+            os.makedirs(output_directory, exist_ok=True)
+            for dir_entry in os.scandir(input_directory):
+                if not dir_entry.is_file():
+                    continue
+                if not os.path.splitext(dir_entry.name)[1][1:] in RECOGNIZED_IMAGE_EXTENSIONS:
+                    continue
+                input_filename = dir_entry.name
+                output_filename = input_filename
+                source_path = os.path.join(
+                    input_directory,
+                    input_filename
+                )
+                output_path = os.path.join(
+                    output_directory,
+                    output_filename
+                )
+                shutil.copy2(source_path, output_path)
+
+
 
 def fetch_colmap_output_data_local(
     calibration_directory=None,
