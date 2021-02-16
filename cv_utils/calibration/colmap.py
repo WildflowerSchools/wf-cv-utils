@@ -13,6 +13,73 @@ logger = logging.getLogger(__name__)
 
 CALIBRATION_DATA_RE = r'(?P<colmap_image_id>[0-9]+) (?P<qw>[-0-9.]+) (?P<qx>[-0-9.]+) (?P<qy>[-0-9.]+) (?P<qz>[-0-9.]+) (?P<tx>[-0-9.]+) (?P<ty>[-0-9.]+) (?P<tz>[-0-9.]+) (?P<colmap_camera_id>[0-9]+) (?P<image_path>.+)'
 
+def write_colmap_output_honeycomb(
+    colmap_output_df,
+    calibration_start,
+    coordinate_space_id,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    calibration_data_columns = [
+        'device_id',
+        'image_width',
+        'image_height',
+        'camera_matrix',
+        'distortion_coefficients',
+        'rotation_vector',
+        'translation_vector',
+        'position'
+    ]
+    if not set(calibration_data_columns).issubset(set(colmap_output_df.columns)):
+        raise ValueError('COLMAP output data must contain the following columns: {}'.format(
+            calibration_data_columns
+        ))
+    colmap_output_df = colmap_output_df.dropna(subset=['device_id'])
+    calibration_start = pd.to_datetime(calibration_start, utc=True).to_pydatetime()
+    intrinsic_calibration_ids = cv_utils.calibration.honeyomb.write_intrinsic_calibration_data(
+        data=colmap_output_df,
+        start_datetime=calibration_start,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    extrinsic_calibration_ids = cv_utils.calibration.honeycomb.write_extrinsic_calibration_data(
+        data=colmap_output_df,
+        start_datetime=calibration_start,
+        coordinate_space_id=coordinate_space_id,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    position_assignment_ids = cv_utils.calibration.honeycomb.write_position_data(
+        data=colmap_output_df,
+        start_datetime=calibration_start,
+        coordinate_space_id=coordinate_space_id,
+        assigned_type='DEVICE',
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    honeycomb_ids = {
+        'intrinsic_calibration_ids': intrinsic_calibration_ids,
+        'extrinsic_calibraion_ids': extrinsic_calibration_ids,
+        'position_assignment_ids': position_assignment_ids
+    }
+    return honeycomb_ids
+
 def prepare_colmap_inputs(
     calibration_directory=None,
     calibration_identifier=None,

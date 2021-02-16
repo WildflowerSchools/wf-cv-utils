@@ -16,13 +16,18 @@ def write_intrinsic_calibration_data(
     client_id=None,
     client_secret=None
 ):
-    intrinsic_calibration_data_df = data.reset_index().reindex(columns=[
+    intrinsic_calibration_data_columns = [
         'device_id',
         'image_width',
         'image_height',
         'camera_matrix',
         'distortion_coefficients'
-    ])
+    ]
+    if not set(intrinsic_calibration_data_columns).issubset(set(data.columns)):
+        raise ValueError('Data must contain the following columns: {}'.format(
+            intrinsic_calibration_data_columns
+        ))
+    intrinsic_calibration_data_df = data.reset_index().reindex(columns=intrinsic_calibration_data_columns)
     intrinsic_calibration_data_df.rename(columns={'device_id': 'device'}, inplace=True)
     intrinsic_calibration_data_df['start'] = minimal_honeycomb.to_honeycomb_datetime(start_datetime)
     intrinsic_calibration_data_df['camera_matrix'] = intrinsic_calibration_data_df['camera_matrix'].apply(lambda x: x.tolist())
@@ -64,11 +69,16 @@ def write_extrinsic_calibration_data(
     client_id=None,
     client_secret=None
 ):
-    extrinsic_calibration_data_df = data.reset_index().reindex(columns=[
+    extrinsic_calibration_data_columns = [
         'device_id',
         'rotation_vector',
         'translation_vector'
-    ])
+    ]
+    if not set(extrinsic_calibration_data_columns).issubset(set(data.columns)):
+        raise ValueError('Data must contain the following columns: {}'.format(
+            extrinsic_calibration_data_columns
+        ))
+    extrinsic_calibration_data_df = data.reset_index().reindex(columns=extrinsic_calibration_data_columns)
     extrinsic_calibration_data_df.rename(columns={'device_id': 'device'}, inplace=True)
     extrinsic_calibration_data_df['start'] = minimal_honeycomb.to_honeycomb_datetime(start_datetime)
     extrinsic_calibration_data_df['coordinate_space'] = coordinate_space_id
@@ -112,10 +122,15 @@ def write_position_data(
     client_id=None,
     client_secret=None
 ):
-    position_data_df = data.reset_index().reindex(columns=[
+    position_data_columns = [
         'device_id',
         'position'
-    ])
+    ]
+    if not set(position_data_columns).issubset(set(data.columns)):
+        raise ValueError('Data must contain the following columns: {}'.format(
+            position_data_columns
+        ))
+    position_data_df = data.reset_index().reindex(columns=position_data_columns)
     position_data_df.rename(columns={'device_id': 'assigned'}, inplace=True)
     position_data_df.rename(columns={'position': 'coordinates'}, inplace=True)
     position_data_df['start'] = minimal_honeycomb.to_honeycomb_datetime(start_datetime)
