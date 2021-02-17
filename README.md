@@ -12,9 +12,6 @@ Miscellaneous utilities for working with camera data:
 ## Task list
 
 * Update dependencies
-* Clean up API (rationalize all of the `__init__.py` files, etc.)
-* Write docstrings for main user-facing classes, methods, and functions
-* Clean up internal cross-module references
 * Add option to `project_points()` to include points that are projected inside the frame with distortion but just outside the frame without
 * When API for specifying video start times changes in `wf-video-io`, update here
 * Create endpoint for preparing COLMAP inputs
