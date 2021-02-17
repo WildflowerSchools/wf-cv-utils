@@ -140,7 +140,7 @@ def prepare_colmap_inputs(
             image_timestamps=[image_timestamp],
             camera_device_ids=[camera_device_id],
             chunk_size=chunk_size,
-            minimal_honeycomb_client=client,
+            client=client,
             uri=uri,
             token_uri=token_uri,
             audience=audience,
