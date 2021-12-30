@@ -207,9 +207,9 @@ def get_text_box_coordinates(
     text_width, text_height = text_size
     baseline += thickness
     text_box_lower_left_u = text_org_u
-    text_box_lower_left_v  = text_org_v + baseline
+    text_box_lower_left_v  = text_org_v + baseline/2
     text_box_upper_right_u = text_org_u + text_width
-    text_box_upper_right_v = text_org_v - text_height
+    text_box_upper_right_v = text_org_v - text_height - baseline/2
     coordinates = (
         (text_box_lower_left_u, text_box_lower_left_v),
         (text_box_upper_right_u, text_box_upper_right_v)
