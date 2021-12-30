@@ -1,8 +1,8 @@
 import cv_datetime_utils
 import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
-import scipy.optimize
+# import matplotlib.pyplot as plt
+# import scipy.optimize
 import json
 import os
 
