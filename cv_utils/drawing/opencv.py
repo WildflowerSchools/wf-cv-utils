@@ -86,6 +86,42 @@ def draw_line(
     )
     return new_image
 
+def draw_timestamp(
+    original_image,
+    timestamp,
+    padding=5,
+    font_face=cv.FONT_HERSHEY_PLAIN,
+    font_scale=1.5,
+    text_line_width=1,
+    text_color='#00ff00',
+    text_alpha=1.0,
+    box_line_width=0,
+    box_color='#000000',
+    box_fill=True,
+    box_alpha=0.3
+):
+
+    image_height, image_width, image_depth = original_image.shape
+    upper_right_coordinates = [image_width - padding, padding]
+    timestamp_text = timestamp.isoformat()
+    new_image = draw_text_box(
+        original_image=original_image,
+        anchor_coordinates=upper_right_coordinates,
+        text=timestamp_text,
+        horizontal_alignment='right',
+        vertical_alignment='top',
+        font_face=font_face,
+        font_scale=font_scale,
+        text_line_width=text_line_width,
+        text_color=text_color,
+        text_alpha=text_alpha,
+        box_line_width=box_line_width,
+        box_color=box_color,
+        box_fill=box_fill,
+        box_alpha=box_alpha
+    )
+    return new_image
+
 def draw_text_box(
     original_image,
     anchor_coordinates,
