@@ -119,9 +119,9 @@ def draw_text_box(
     else:
         raise ValueError('Horizontal aligment \'{}\' not recognized'.format(horizontal_alignment))
     if vertical_alignment == 'top':
-        org_v = coordinates[1] + (text_box_height + baseline)
+        org_v = coordinates[1] - (text_box_height + baseline)
     elif vertical_alignment == 'middle':
-        org_v = coordinates[1] + (text_box_height + baseline) / 2
+        org_v = coordinates[1] - (text_box_height + baseline) / 2
     elif vertical_alignment == 'bottom':
         org_v = coordinates[1]
     else:
