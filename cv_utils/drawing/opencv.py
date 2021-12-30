@@ -86,6 +86,71 @@ def draw_line(
     )
     return new_image
 
+def draw_text_box(
+    original_image,
+    coordinates,
+    text,
+    horizontal_alignment='center',
+    vertical_alignment='bottom',
+    font_face=cv.FONT_HERSHEY_PLAIN,
+    font_scale=1.0,
+    text_line_width=1,
+    text_color='#00ff00',
+    text_alpha=1.0
+    box_line_width=1.5,
+    box_color='#00ff00',
+    box_fill=True,
+    box_alpha=1.0
+):
+    thickness = math.ceil(text_line_width)
+    text_box_size, baseline = cv.getTextSize(
+        text=text,
+        fontFace=font_face,
+        fontScale=font_scale,
+        thickness=thickness
+    )
+    text_box_width, text_box_height = text_box_size
+    if horizontal_alignment == 'left':
+        org_u = coordinates[0]
+    elif horizontal_alignment == 'center':
+        org_u = coordinates[0] - text_box_width / 2
+    elif horizontal_alignment == 'right':
+        org_u = coordinates[0] - text_box_width
+    else:
+        raise ValueError('Horizontal aligment \'{}\' not recognized'.format(horizontal_alignment))
+    if vertical_alignment == 'top':
+        org_v = coordinates[1] + (text_box_height + baseline)
+    elif vertical_alignment == 'middle':
+        org_v = coordinates[1] + (text_box_height + baseline) / 2
+    elif vertical_alignment == 'bottom':
+        org_v = coordinates[1]
+    else:
+        raise ValueError('Vertical aligment \'{}\' not recognized'.format(vertical_alignment))
+    rectangle_coordinates = [
+        [org_u, org_v],
+        [org_u + text_box_width, org_v + text_box_height]
+    ]
+    new_image = draw_rectangle(
+        original_image,
+        coordinates=rectangle_coordinates,
+        line_width=box_line_width,
+        color=box_color,
+        fill=box_fill,
+        alpha=box_alpha
+    )
+    new_image = draw_text(
+        new_image,
+        coordinates=coordinates,
+        text=text,
+        horizontal_alignment=horizontal_alignment,
+        vertical_alignment=vertical_alignment,
+        font_face=font_face,
+        font_scale=font_scale,
+        line_width=text_line_width,
+        color=text_color,
+        alpha=text_alpha
+    )
+    return new_image
 
 def draw_text(
     original_image,
