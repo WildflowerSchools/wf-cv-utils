@@ -245,7 +245,7 @@ def get_text_org(
     if vertical_alignment == 'top':
         text_org_v = anchor_coordinates_v + text_height
     elif vertical_alignment == 'middle':
-        text_org_v = anchor_oordinates_v + text_height / 2
+        text_org_v = anchor_coordinates_v + text_height / 2
     elif vertical_alignment == 'bottom':
         text_org_v = anchor_coordinates_v
     else:
