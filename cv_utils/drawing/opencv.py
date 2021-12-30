@@ -93,7 +93,7 @@ def draw_timestamp(
     font_face=cv.FONT_HERSHEY_PLAIN,
     font_scale=1.5,
     text_line_width=1,
-    text_color='#00ff00',
+    text_color='#ffffff',
     text_alpha=1.0,
     box_line_width=0,
     box_color='#000000',
@@ -104,6 +104,12 @@ def draw_timestamp(
     image_height, image_width, image_depth = original_image.shape
     upper_right_coordinates = [image_width - padding, padding]
     timestamp_text = timestamp.isoformat()
+    # logger.info('image_width: {}, image_height: {}, anchor_coordinates: {}, text: {}'.format(
+    #     image_width,
+    #     image_height,
+    #     upper_right_coordinates,
+    #     timestamp_text
+    # ))
     new_image = draw_text_box(
         original_image=original_image,
         anchor_coordinates=upper_right_coordinates,
