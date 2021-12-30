@@ -149,6 +149,7 @@ def draw_text(
         if abs(anchor_coordinate) > 2**30:
             return original_image
     color_bgr = cv_utils.color.hex_to_bgr(color)
+    thickness = math.ceil(line_width)
     text_org_u, text_org_v = get_text_org(
         anchor_coordinates=anchor_coordinates,
         text=text,
