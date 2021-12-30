@@ -104,7 +104,7 @@ def draw_timestamp(
 
     image_height, image_width, image_depth = original_image.shape
     upper_right_coordinates = [image_width - padding, padding]
-    timestamp_text = pd.to_datetime(timestamp, utc=True).strftime('%Y-%m-%dT%H:%M%S.%fUTC')
+    timestamp_text = pd.to_datetime(timestamp, utc=True).strftime('%Y-%m-%dT%H:%M:%S.%fUTC')
     new_image = draw_text_box(
         original_image=original_image,
         anchor_coordinates=upper_right_coordinates,
