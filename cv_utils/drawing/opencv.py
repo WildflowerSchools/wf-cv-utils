@@ -96,7 +96,7 @@ def draw_text_box(
     font_scale=1.0,
     text_line_width=1,
     text_color='#00ff00',
-    text_alpha=1.0
+    text_alpha=1.0,
     box_line_width=1.5,
     box_color='#00ff00',
     box_fill=True,
