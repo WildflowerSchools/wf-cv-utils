@@ -1,3 +1,4 @@
+import cv_utils.core
 import cv2 as cv
 import pandas as pd
 import datetime
@@ -28,12 +29,38 @@ class VideoInput:
     def close(self):
         self.capture_object.release()
 
-    def get_frame(self):
-        ret, frame = self.capture_object.read()
-        if ret:
-            return frame
-        else:
-            return None
+    def write_frame_by_timestamp(
+        self,
+        timestamp,
+        path
+    ):
+        image=self.get_frame_by_timestamp(timestamp)
+        cv_utils.core.write_image(
+            image=image,
+            path=path
+        )
+
+    def write_frame_by_frame_number(
+        self,
+        frame_number,
+        path
+    ):
+        image=self.get_frame_by_frame_number(frame_number)
+        cv_utils.core.write_image(
+            image=image,
+            path=path
+        )
+
+    def write_frame_by_milliseconds(
+        self,
+        milliseconds,
+        path
+    ):
+        image=self.get_frame_by_milliseconds(milliseconds)
+        cv_utils.core.write_image(
+            image=image,
+            path=path
+        )
 
     def get_frame_by_timestamp(self, timestamp):
         if self.video_parameters.start_time is None or self.video_parameters.fps is None or self.video_parameters.frame_count is None:
@@ -58,6 +85,12 @@ class VideoInput:
         self.capture_object.set(cv.CAP_PROP_POS_MSEC, milliseconds)
         return self.get_frame()
 
+    def get_frame(self):
+        ret, frame = self.capture_object.read()
+        if ret:
+            return frame
+        else:
+            return None
 
 class VideoOutput:
     def __init__(
