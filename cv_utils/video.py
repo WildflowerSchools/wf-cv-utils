@@ -3,7 +3,9 @@ import cv2 as cv
 import pandas as pd
 import datetime
 import os
+import logging
 
+logger = logging.getLogger(__name__)
 
 class VideoInput:
     def __init__(
@@ -70,9 +72,14 @@ class VideoInput:
         except Exception as e:
             raise ValueError('Cannot parse start time: {}'.format(timestamp))
         frame_number = round(
-            (timestamp -self.video_parameters.start_time).total_seconds()*
+            (timestamp - self.video_parameters.start_time).total_seconds()*
             self.video_parameters.fps
         )
+        logger.debug('Target timestamp is {}. Selected frame number {} at timestamp {}'.format(
+            timestamp.isoformat(),
+            frame_number,
+            (self.video_parameters.start_time + datetime.timedelta(seconds=frame_number/self.video_parameters.fps)).isoformat()
+        ))
         if frame_number < 0 or frame_number > self.video_parameters.frame_count:
             raise ValueError('Specified datetime is outside the time range of the video')
         return self.get_frame_by_frame_number(frame_number)
