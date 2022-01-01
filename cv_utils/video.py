@@ -43,7 +43,7 @@ class VideoInput:
         except Exception as e:
             raise ValueError('Cannot parse start time: {}'.format(timestamp))
         frame_number = round(
-            (timestamp -self.video_parameters.start_time).total_seconds()/
+            (timestamp -self.video_parameters.start_time).total_seconds()*
             self.video_parameters.fps
         )
         if frame_number < 0 or frame_number > self.video_parameters.frame_count:
