@@ -1,4 +1,5 @@
 import cv2 as cv
+import pandas as pd
 import datetime
 import os
 
@@ -33,6 +34,21 @@ class VideoInput:
             return frame
         else:
             return None
+
+    def get_frame_by_timestamp(self, timestamp):
+        if self.video_parameters.start_time is None or self.video_parameters.fps is None or self.video_parameters.frame_count is None:
+            raise ValueError('Valid video start time, FPS, and frame count required to get frame by timestamp')
+        try:
+            timestamp = pd.to_datetime(timestamp, utc=True).to_pydatetime()
+        except Exception as e:
+            raise ValueError('Cannot parse start time: {}'.format(timestamp))
+        frame_number = round(
+            (timestamp -self.video_parameters.start_time).total_seconds()/
+            self.video_parameters.fps
+        )
+        if frame_number < 0 or frame_number > self.video_parameters.frame_count:
+            raise ValueError('Specified datetime is outside the time range of the video')
+        return self.get_frame_by_frame_number(frame_number)
 
     def get_frame_by_frame_number(self, frame_number):
         self.capture_object.set(cv.CAP_PROP_POS_FRAMES, frame_number)
@@ -89,12 +105,16 @@ class VideoParameters:
         self.time_index = None
         if start_time is not None:
             try:
-                self.start_time = start_time.astimezone(datetime.timezone.utc)
+                start_time = pd.to_datetime(start_time, utc=True).to_pydatetime()
             except Exception as e:
-                try:
-                    self.start_time = datetime.fromisoformat(start_time).astimezone(datetime.timezone.utc)
-                except Exception as e:
-                    raise ValueError('Cannot parse start time: {}'.format(start_time))
+                raise ValueError('Cannot parse start time: {}'.format(start_time))
+            # try:
+            #     self.start_time = start_time.astimezone(datetime.timezone.utc)
+            # except Exception as e:
+            #     try:
+            #         self.start_time = datetime.fromisoformat(start_time).astimezone(datetime.timezone.utc)
+                # except Exception as e:
+                #     raise ValueError('Cannot parse start time: {}'.format(start_time))
         if frame_width is not None:
             try:
                 self.frame_width = int(frame_width)
