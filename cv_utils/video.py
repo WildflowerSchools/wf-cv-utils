@@ -105,7 +105,7 @@ class VideoParameters:
         self.time_index = None
         if start_time is not None:
             try:
-                start_time = pd.to_datetime(start_time, utc=True).to_pydatetime()
+                self.start_time = pd.to_datetime(start_time, utc=True).to_pydatetime()
             except Exception as e:
                 raise ValueError('Cannot parse start time: {}'.format(start_time))
             # try:
