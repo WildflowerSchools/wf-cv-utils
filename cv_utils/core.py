@@ -782,3 +782,15 @@ def estimate_camera_poses_from_plane_image_points(
         relative_rotation_vector,
         relative_translation_vector * scale_factor)
     return rotation_vector_1, translation_vector_1, rotation_vector_2, translation_vector_2
+
+def write_image(
+    image,
+    path
+):
+    image_output_directory, image_output_filename = os.path.split(path)
+    if image_output_directory is not None:
+        os.makedirs(image_output_directory, exist_ok=True)
+    cv.imwrite(
+        filename=path,
+        img=image
+    )
