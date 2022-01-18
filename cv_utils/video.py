@@ -1,4 +1,5 @@
 import cv_utils.core
+import cv_utils.eager_video_capture as vc_queue
 import cv2 as cv
 import pandas as pd
 import datetime
@@ -7,15 +8,27 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class VideoInput:
     def __init__(
         self,
         input_path,
-        start_time=None
+        start_time=None,
+        queue_frames=True,
+        queue_size=64
     ):
         if not os.path.isfile(input_path):
             raise ValueError('No file at specified path: {}'.format(input_path))
-        self.capture_object = cv.VideoCapture(input_path)
+
+        self.queue_frames = queue_frames
+
+        if self.queue_frames:
+            self.video_queue = vc_queue.EagerVideoCapture(input_path, queue_size=queue_size)
+            self.capture_object = self.video_queue.capture_object
+        else:
+            self.video_queue = None
+            self.capture_object = cv.VideoCapture(input_path)
+
         self.video_parameters = VideoParameters(
             start_time=start_time,
             frame_width=self.capture_object.get(cv.CAP_PROP_FRAME_WIDTH),
@@ -47,7 +60,7 @@ class VideoInput:
         frame_number,
         path
     ):
-        image=self.get_frame_by_frame_number(frame_number)
+        image = self.get_frame_by_frame_number(frame_number)
         cv_utils.core.write_image(
             image=image,
             path=path
@@ -58,7 +71,7 @@ class VideoInput:
         milliseconds,
         path
     ):
-        image=self.get_frame_by_milliseconds(milliseconds)
+        image = self.get_frame_by_milliseconds(milliseconds)
         cv_utils.core.write_image(
             image=image,
             path=path
@@ -93,11 +106,20 @@ class VideoInput:
         return self.get_frame()
 
     def get_frame(self):
-        ret, frame = self.capture_object.read()
+        if self.queue_frames:
+            # Wait to start queue until the first frame is needed. This is in case
+            # additional VideoCaptureProperties need to be applied before the
+            # video begins streaming (i.e. cv.CAP_PROP_POS_FRAMES - start frame)
+            self.video_queue.start()
+            ret, frame = self.video_queue.read()
+        else:
+            ret, frame = self.capture_object.read()
+
         if ret:
             return frame
         else:
             return None
+
 
 class VideoOutput:
     def __init__(
@@ -181,8 +203,10 @@ class VideoParameters:
             except Exception as e:
                 raise ValueError('FourCC code must be convertible to integer')
 
+
 def fourcc_string_to_int(fourcc_string):
     return cv.VideoWriter_fourcc(*fourcc_string)
+
 
 def fourcc_int_to_string(fourcc_int):
     return "".join([chr((int(fourcc_int) >> 8 * i) & 0xFF) for i in range(4)])
