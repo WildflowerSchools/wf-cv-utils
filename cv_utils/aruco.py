@@ -24,29 +24,37 @@ ARUCO_DICTIONARIES = {
     cv.aruco.DICT_APRILTAG_36h11: {'marker_size': 6, 'num_markers': 587, 'april_tag': True}
 }
 
-def create_charuco_board(
-    num_squares_x=7,
-    num_squares_y=5,
-    marker_size=6,
-    april_tag=False,
-    square_side_length=1.0,
-    marker_side_length_ratio=0.8
-):
-    aruco_dict = fetch_aruco_dictionary(
-        num_squares_x=num_squares_x,
-        num_squares_y=num_squares_y,
-        marker_size=marker_size,
-        april_tag=april_tag
-    )
-    marker_side_length = marker_side_length_ratio*square_side_length
-    board = cv.aruco.CharucoBoard_create(
-        squaresX=num_squares_x,
-        squaresY=num_squares_y,
-        squareLength=square_side_length,
-        markerLength=marker_side_length,
-        dictionary=aruco_dict
-    )
-    return board
+class CharucoBoard:
+
+    def __init__(
+        self,
+        num_squares_x=7,
+        num_squares_y=5,
+        marker_size=6,
+        april_tag=False,
+        square_side_length=1.0,
+        marker_side_length_ratio=0.8
+    ):
+        self.num_squares_x = num_squares_x
+        self.num_squares_y = num_squares_y
+        self.marker_size = marker_size
+        self.april_tag = april_tag
+        self.square_side_length = square_side_length
+        self.marker_side_length_ratio = marker_side_length_ratio
+        self.marker_side_length = marker_side_length_ratio*square_side_length
+        self.aruco_dict = fetch_aruco_dictionary(
+            num_squares_x=self.num_squares_x,
+            num_squares_y=self.num_squares_y,
+            marker_size=self.marker_size,
+            april_tag=self.april_tag
+        )
+        self._cv_charuco_board = cv.aruco.CharucoBoard_create(
+            squaresX=self.num_squares_x,
+            squaresY=self.num_squares_y,
+            squareLength=self.square_side_length,
+            markerLength=self.marker_side_length,
+            dictionary=self.aruco_dict
+        )
 
 def fetch_aruco_dictionary(
     num_squares_x=7,
