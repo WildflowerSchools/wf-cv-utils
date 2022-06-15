@@ -56,6 +56,29 @@ class CharucoBoard:
             dictionary=self.aruco_dict
         )
 
+    def create_image(
+        self,
+        image_width=None,
+        image_height=None,
+        margin_size=0,
+        num_border_squares=1
+    ):
+        image_aspect_ratio = self.num_squares_x/self.num_squares_y
+        if image_width is not None and image_height is not None:
+            image_size = (image_width, image_height)
+        elif image_width is not None and image_height is None:
+            image_size = (image_width, round(image_width/image_aspect_ratio))
+        elif image_width is None and image_height is not None:
+            image_size = (round(image_height*image_aspect_ratio), image_height)
+        else:
+            raise ValueError('Must specify either image width or image height (or both)')
+        image = self._cv_charuco_board.draw(
+            outSize=image_size,
+            marginSize=margin_size,
+            borderBits= num_border_squares
+        )
+        return image
+
 def fetch_aruco_dictionary(
     num_squares_x=7,
     num_squares_y=5,
