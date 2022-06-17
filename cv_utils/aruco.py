@@ -51,9 +51,8 @@ class CharucoBoard:
         self.square_side_length = square_side_length
         self.marker_side_length_ratio = marker_side_length_ratio
         self.marker_side_length = marker_side_length_ratio*square_side_length
-        self.aruco_dict = fetch_aruco_dictionary(
-            num_squares_x=self.num_squares_x,
-            num_squares_y=self.num_squares_y,
+        self.aruco_dict = get_predefined_aruco_dictionary(
+            num_markers=self.num_squares_x*self.num_squares_y,
             marker_size=self.marker_size,
             april_tag=self.april_tag
         )
@@ -107,16 +106,15 @@ class CharucoBoard:
         )
         return image
 
-def fetch_aruco_dictionary(
-    num_squares_x=7,
-    num_squares_y=5,
+def get_predefined_aruco_dictionary(
+    num_markers=40,
     marker_size=6,
     april_tag=False
 ):
     compatible_aruco_dictionaries = list(filter(
         lambda item: (
             item[1]['marker_size']==marker_size and
-            item[1]['num_markers'] >= num_squares_x*num_squares_y and
+            item[1]['num_markers'] >= num_markers and
             item[1]['april_tag'] == april_tag
         ),
         ARUCO_DICTIONARIES.items()
