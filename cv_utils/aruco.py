@@ -73,6 +73,8 @@ class CharucoBoard:
         num_squares_x=7,
         num_squares_y=5,
         marker_size=6,
+        use_predefined_dict=False,
+        random_seed=0,
         april_tag=False,
         square_side_length=1.0,
         marker_side_length_ratio=0.8
@@ -80,13 +82,18 @@ class CharucoBoard:
         self.num_squares_x = num_squares_x
         self.num_squares_y = num_squares_y
         self.marker_size = marker_size
+        self.use_predefined_dict = use_predefined_dict
+        self.random_seed = random_seed
         self.april_tag = april_tag
         self.square_side_length = square_side_length
         self.marker_side_length_ratio = marker_side_length_ratio
         self.marker_side_length = marker_side_length_ratio*square_side_length
-        self.aruco_dict = get_predefined_aruco_dictionary(
+        self.aruco_dict = create_aruco_dictionary(
             num_markers=self.num_squares_x*self.num_squares_y,
             marker_size=self.marker_size,
+            use_predefined_dict=self.use_predefined_dict,
+            base_dictionary=None,
+            random_seed=self.random_seed,
             april_tag=self.april_tag
         )
         self._cv_charuco_board = cv.aruco.CharucoBoard_create(
@@ -139,6 +146,29 @@ class CharucoBoard:
         )
         return image
 
+def create_aruco_dictionary(
+    num_markers=40,
+    marker_size=6,
+    use_predefined_dict=False,
+    base_dictionary=None,
+    random_seed=0,
+    april_tag=False
+):
+    if use_predefined_dict:
+        aruco_dict = get_predefined_aruco_dictionary(
+            num_markers=num_markers,
+            marker_size=marker_size,
+            april_tag=april_tag
+        )
+    else:
+        aruco_dict = generate_custom_aruco_dictionary(
+            num_markers=num_markers,
+            marker_size=marker_size,
+            base_dictionary=base_dictionary,
+            random_seed=random_seed
+        )
+    return aruco_dict
+
 def get_predefined_aruco_dictionary(
     num_markers=40,
     marker_size=6,
@@ -164,3 +194,24 @@ def get_predefined_aruco_dictionary(
     aruco_dict_specifier = selected_aruco_dictionary[0]
     aruco_dictionary = cv.aruco.Dictionary_get(aruco_dict_specifier)
     return aruco_dictionary
+
+def generate_custom_aruco_dictionary(
+    num_markers=40,
+    marker_size=6,
+    base_dictionary=None,
+    random_seed=0
+):
+    if base_dictionary is not None:
+        aruco_dict = cv.aruco.custom_dictionary_from(
+            nMarkers=num_markers,
+            markerSize=marker_size,
+            baseDictionary=base_dictionary,
+            randomSeed=random_seed
+        )
+    else:
+        aruco_dict = cv.aruco.custom_dictionary(
+            nMarkers=num_markers,
+            markerSize=marker_size,
+            randomSeed=random_seed
+        )
+    return aruco_dict
