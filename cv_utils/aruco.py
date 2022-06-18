@@ -33,6 +33,39 @@ CORNER_REFINEMENT_METHODS = {
     'april_tag': cv.aruco.CORNER_REFINE_APRILTAG
 }
 
+def detect_markers(
+    image,
+    aruco_dict,
+    corner_refinement_method='none',
+    corner_refinement_window_size=5,
+    corner_refinement_max_iterations=30,
+    corner_refinement_accuracy=0.1,
+    detector_parameters=None
+):
+    corner_refinement_method_specifier = CORNER_REFINEMENT_METHODS.get(corner_refinement_method)
+    if corner_refinement_method_specifier is None:
+        raise ValueError('Corner refinement method must be one of the following: {}'.format(
+            ', '.join(CORNER_REFINEMENT_METHODS.keys())
+        ))
+    detector_parameters_object = cv.aruco.DetectorParameters.create()
+    if detector_parameters is not None:
+        for parameter, value in detector_parameters.items():
+            setattr(detector_parameters_object, parameter, value)
+    setattr(detector_parameters_object, 'cornerRefinementMethod', corner_refinement_method_specifier)
+    setattr(detector_parameters_object, 'cornerRefinementWinSize', corner_refinement_window_size)
+    setattr(detector_parameters_object, 'cornerRefinementMaxIterations', corner_refinement_max_iterations)
+    setattr(detector_parameters_object, 'cornerRefinementMinAccuracy', corner_refinement_accuracy)
+    image_grayscale = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    corners, ids, rejected_image_points = cv.aruco.detectMarkers(
+        image=image_grayscale,
+        dictionary=aruco_dict,
+        parameters=detector_parameters_object
+    )
+    corners = np.squeeze(np.stack(corners))
+    ids = np.squeeze(ids)
+    rejected_image_points = np.squeeze(np.stack(rejected_image_points))
+    return corners, ids, rejected_image_points
+
 class CharucoBoard:
 
     def __init__(
@@ -131,36 +164,3 @@ def get_predefined_aruco_dictionary(
     aruco_dict_specifier = selected_aruco_dictionary[0]
     aruco_dictionary = cv.aruco.Dictionary_get(aruco_dict_specifier)
     return aruco_dictionary
-
-def detect_markers(
-    image,
-    aruco_dict,
-    corner_refinement_method='none',
-    corner_refinement_window_size=5,
-    corner_refinement_max_iterations=30,
-    corner_refinement_accuracy=0.1,
-    detector_parameters=None
-):
-    corner_refinement_method_specifier = CORNER_REFINEMENT_METHODS.get(corner_refinement_method)
-    if corner_refinement_method_specifier is None:
-        raise ValueError('Corner refinement method must be one of the following: {}'.format(
-            ', '.join(CORNER_REFINEMENT_METHODS.keys())
-        ))
-    detector_parameters_object = cv.aruco.DetectorParameters.create()
-    if detector_parameters is not None:
-        for parameter, value in detector_parameters.items():
-            setattr(detector_parameters_object, parameter, value)
-    setattr(detector_parameters_object, 'cornerRefinementMethod', corner_refinement_method_specifier)
-    setattr(detector_parameters_object, 'cornerRefinementWinSize', corner_refinement_window_size)
-    setattr(detector_parameters_object, 'cornerRefinementMaxIterations', corner_refinement_max_iterations)
-    setattr(detector_parameters_object, 'cornerRefinementMinAccuracy', corner_refinement_accuracy)
-    image_grayscale = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-    corners, ids, rejected_image_points = cv.aruco.detectMarkers(
-        image=image_grayscale,
-        dictionary=aruco_dict,
-        parameters=detector_parameters_object
-    )
-    corners = np.squeeze(np.stack(corners))
-    ids = np.squeeze(ids)
-    rejected_image_points = np.squeeze(np.stack(rejected_image_points))
-    return corners, ids, rejected_image_points
