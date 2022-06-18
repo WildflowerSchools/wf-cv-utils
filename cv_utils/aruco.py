@@ -220,6 +220,12 @@ class ArucoDictionary:
             _cv_aruco_dictionary=cv_aruco_dictionary
         )
 
+    def bytes_list(self):
+        return self._cv_aruco_dictionary.bytesList
+
+    def max_correction_bits(self):
+        return self._cv_aruco_dictionary.maxCorrectionBits
+
     def detect_markers(
         self,
         image,
