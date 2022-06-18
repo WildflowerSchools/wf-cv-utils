@@ -150,6 +150,25 @@ class CharucoBoard:
         )
         return image
 
+    def detect_markers(
+        self,
+        image,
+        corner_refinement_method='none',
+        corner_refinement_window_size=5,
+        corner_refinement_max_iterations=30,
+        corner_refinement_accuracy=0.1,
+        detector_parameters=None
+    ):
+        return self.aruco_dictionary.detect_markers(
+            image=image,
+            corner_refinement_method=corner_refinement_method,
+            corner_refinement_window_size=corner_refinement_window_size,
+            corner_refinement_max_iterations=corner_refinement_max_iterations,
+            corner_refinement_accuracy=corner_refinement_accuracy,
+            detector_parameters=detector_parameters
+        )
+
+
 class ArucoDictionary:
     def __init__(
         self,
