@@ -221,6 +221,7 @@ class ArucoDictionary:
         )
 
     def detect_markers(
+        self,
         image,
         corner_refinement_method='none',
         corner_refinement_window_size=5,
