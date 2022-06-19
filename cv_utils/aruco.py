@@ -486,6 +486,45 @@ class ArucoDictionary:
     def max_correction_bits(self):
         return self._cv_aruco_dictionary.maxCorrectionBits
 
+    def write_image(
+        self,
+        path,
+        id,
+        image_size=1000,
+        num_border_squares=1
+    ):
+        image = self.create_image(
+            id=id,
+            image_size=image_size,
+            num_border_squares=num_border_squares
+        )
+        logger.info('Writing image to \'{}\''.format(
+            path
+        ))
+        cv_utils.core.write_image(
+            image=image,
+            path=path
+        )
+
+    def create_image(
+        self,
+        id,
+        image_size=1000,
+        num_border_squares=1
+    ):
+        logger.info('Creating {}x{} image of marker {} with {} border squares'.format(
+            image_size,
+            image_size,
+            id,
+            num_border_squares
+        ))
+        image=self._cv_aruco_dictionary.drawMarker(
+            id=id,
+            sidePixels=image_size,
+            borderBits=num_border_squares
+        )
+        return image
+
     def detect_markers(
         self,
         image,
