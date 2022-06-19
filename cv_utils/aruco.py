@@ -1,6 +1,7 @@
 import cv_utils.core
 import cv2 as cv
 import numpy as np
+import os
 
 CV_ARUCO_DICTIONARIES = {
     cv.aruco.DICT_4X4_50: {'marker_size': 4, 'num_markers': 50, 'april_tag': False},
@@ -150,25 +151,124 @@ class CharucoBoard:
         )
         return image
 
+    def calibrate_camera(
+        self,
+        image_directory,
+        min_chessboard_corners=3,
+        use_intrinsic_guess=False,
+        fix_principal_point=False,
+        fix_aspect_ratio=False,
+        zero_tangent_distortion=False,
+        fix_focal_length=False,
+        fix_k1=False,
+        fix_k2=False,
+        fix_k3=False,
+        fix_k4=False,
+        fix_k5=False,
+        fix_k6=False,
+        rational_model=False,
+        thin_prism_model=False,
+        fix_s1_s2_s3_s4=False,
+        tilted_model=False,
+        fix_taux_tauy=False,
+        camera_matrix_guess=None,
+        distortion_coefficients_guess=None,
+        calibration_max_iterations=30,
+        calibration_accuracy=1e-9,
+        min_markers=2,
+        marker_corner_refinement_method='none',
+        marker_corner_refinement_window_size=5,
+        marker_corner_refinement_max_iterations=30,
+        marker_corner_refinement_accuracy=0.1,
+        marker_detector_parameters=None
+    ):
+        calibration_termination_criteria = cv_utils.core.termination_criteria(
+            max_iterations=calibration_max_iterations,
+            accuracy=calibration_accuracy
+        )
+        calibration_flags = cv_utils.core.camera_calibration_flags(
+            use_intrinsic_guess=use_intrinsic_guess,
+            fix_principal_point=fix_principal_point,
+            fix_aspect_ratio=fix_aspect_ratio,
+            zero_tangent_distortion=zero_tangent_distortion,
+            fix_focal_length=fix_focal_length,
+            fix_k1=fix_k1,
+            fix_k2=fix_k2,
+            fix_k3=fix_k3,
+            fix_k4=fix_k4,
+            fix_k5=fix_k5,
+            fix_k6=fix_k6,
+            rational_model=rational_model,
+            thin_prism_model=thin_prism_model,
+            fix_s1_s2_s3_s4=fix_s1_s2_s3_s4,
+            tilted_model=tilted_model,
+            fix_taux_tauy=fix_taux_tauy
+        )
+        chessboard_corners_list = list()
+        chessboard_corner_ids_list = list()
+        image_filenames = list()
+        image_shape = None
+        with os.scandir(image_directory) as it:
+            for directory_entry in it:
+                if directory_entry.is_file():
+                    image=cv_utils.read_image(directory_entry.path)
+                    if image_shape is None:
+                        image_shape = image.shape
+                    else:
+                        if image.shape != image_shape:
+                            raise ValueError('Image directory contains images with different shapes')
+                    chessboard_corners, chessboard_corner_ids = self.find_chessboard_corners(
+                        image=image,
+                        min_markers=min_markers,
+                        camera_matrix=None,
+                        distortion_coefficients=None,
+                        marker_corner_refinement_method=marker_corner_refinement_method,
+                        marker_corner_refinement_window_size=marker_corner_refinement_window_size,
+                        marker_corner_refinement_max_iterations=marker_corner_refinement_max_iterations,
+                        marker_corner_refinement_accuracy=marker_corner_refinement_accuracy,
+                        marker_detector_parameters=marker_detector_parameters
+                    )
+                    if chessboard_corners is not None and chessboard_corners.shape[0] > min_chessboard_corners:
+                        image_filenames.append(directory_entry.name)
+                        chessboard_corners_list.append(chessboard_corners.reshape((-1, 1, 2)))
+                        chessboard_corner_ids_list.append(chessboard_corner_ids.reshape((-1, 1)))
+        reprojection_error, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors = cv.aruco.calibrateCameraCharuco(
+            charucoCorners=chessboard_corners_list,
+            charucoIds=chessboard_corner_ids_list,
+            board=self._cv_charuco_board,
+            imageSize=(image_shape[1], image_shape[0]),
+            cameraMatrix=camera_matrix_guess,
+            distCoeffs=distortion_coefficients_guess,
+            flags=calibration_flags,
+            criteria=calibration_termination_criteria
+        )
+        extrinsic_parameters = dict()
+        for image_filename, rotation_vector, translation_vector in zip(image_filenames, rotation_vectors, translation_vectors):
+            extrinsic_parameters[image_filename] = {
+                'rotation_vector': rotation_vector,
+                'translation_vector': translation_vector
+            }
+        return camera_matrix, distortion_coefficients, extrinsic_parameters
+
     def find_chessboard_corners(
         self,
         image,
-        corner_refinement_method='none',
-        corner_refinement_window_size=5,
-        corner_refinement_max_iterations=30,
-        corner_refinement_accuracy=0.1,
-        detector_parameters=None,
         min_markers=2,
         camera_matrix=None,
-        distortion_coefficients=None
+        distortion_coefficients=None,
+        marker_corner_refinement_method='none',
+        marker_corner_refinement_window_size=5,
+        marker_corner_refinement_max_iterations=30,
+        marker_corner_refinement_accuracy=0.1,
+        marker_detector_parameters=None
     ):
         marker_corners, marker_ids, rejected_image_points = self.detect_markers(
             image=image,
-            corner_refinement_method=corner_refinement_method,
-            corner_refinement_window_size=corner_refinement_window_size,
-            corner_refinement_max_iterations=corner_refinement_max_iterations,
-            corner_refinement_accuracy=corner_refinement_accuracy,
-            detector_parameters=detector_parameters
+            corner_refinement_method=marker_corner_refinement_method,
+            corner_refinement_window_size=marker_corner_refinement_window_size,
+            corner_refinement_max_iterations=marker_corner_refinement_max_iterations,
+            corner_refinement_accuracy=marker_corner_refinement_accuracy,
+            detector_parameters=marker_detector_parameters
         )
         num_chessboard_corners, chessboard_corners, chessboard_corner_ids = cv.aruco.interpolateCornersCharuco(
             markerCorners=marker_corners,

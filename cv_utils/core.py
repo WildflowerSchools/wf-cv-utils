@@ -6,6 +6,66 @@ import numpy as np
 import json
 import os
 
+def termination_criteria(
+    max_iterations=10000,
+    accuracy=1e-9
+):
+    termination_criteria = (cv.TERM_CRITERIA_COUNT & cv.TERM_CRITERIA_EPS, max_iterations, accuracy)
+    return termination_criteria
+
+def camera_calibration_flags(
+    use_intrinsic_guess=False,
+    fix_principal_point=False,
+    fix_aspect_ratio=False,
+    zero_tangent_distortion=False,
+    fix_focal_length=False,
+    fix_k1=False,
+    fix_k2=False,
+    fix_k3=False,
+    fix_k4=False,
+    fix_k5=False,
+    fix_k6=False,
+    rational_model=False,
+    thin_prism_model=False,
+    fix_s1_s2_s3_s4=False,
+    tilted_model=False,
+    fix_taux_tauy=False,
+):
+    flags = 0
+    if use_intrinsic_guess:
+        flags += cv.CALIB_USE_INTRINSIC_GUESS
+    if fix_principal_point:
+        flags += cv.CALIB_FIX_PRINCIPAL_POINT
+    if fix_aspect_ratio:
+        flags += cv.CALIB_FIX_ASPECT_RATIO
+    if zero_tangent_distortion:
+        flags += cv.CALIB_ZERO_TANGENT_DIST
+    if fix_focal_length:
+        flags += cv.CALIB_FIX_FOCAL_LENGTH
+    if fix_k1:
+        flags += cv.CALIB_FIX_K1
+    if fix_k2:
+        flags += cv.CALIB_FIX_K2
+    if fix_k3:
+        flags += cv.CALIB_FIX_K3
+    if fix_k4:
+        flags += cv.CALIB_FIX_K4
+    if fix_k5:
+        flags += cv.CALIB_FIX_K5
+    if fix_k6:
+        flags += cv.CALIB_FIX_K6
+    if rational_model:
+        flags += cv.CALIB_RATIONAL_MODEL
+    if thin_prism_model:
+        flags += cv.CALIB_THIN_PRISM_MODEL
+    if fix_s1_s2_s3_s4:
+        flags += cv.CALIB_FIX_S1_S2_S3_S4
+    if tilted_model:
+        flags += cv.CALIB_TILTED_MODEL
+    if fix_taux_tauy:
+        flags += cv.CALIB_FIX_TAUX_TAUY
+    return flags
+
 def compose_transformations(
         rotation_vector_1,
         translation_vector_1,
@@ -794,3 +854,7 @@ def write_image(
         filename=path,
         img=image
     )
+
+def read_image(path):
+    image = cv.imread(path)
+    return image
