@@ -150,6 +150,39 @@ class CharucoBoard:
         )
         return image
 
+    def find_chessboard_corners(
+        self,
+        image,
+        corner_refinement_method='none',
+        corner_refinement_window_size=5,
+        corner_refinement_max_iterations=30,
+        corner_refinement_accuracy=0.1,
+        detector_parameters=None,
+        min_markers=2,
+        camera_matrix=None,
+        distortion_coefficients=None
+    ):
+        marker_corners, marker_ids, rejected_image_points = self.detect_markers(
+            image=image,
+            corner_refinement_method=corner_refinement_method,
+            corner_refinement_window_size=corner_refinement_window_size,
+            corner_refinement_max_iterations=corner_refinement_max_iterations,
+            corner_refinement_accuracy=corner_refinement_accuracy,
+            detector_parameters=detector_parameters
+        )
+        num_chessboard_corners, chessboard_corners, chessboard_corner_ids = cv.aruco.interpolateCornersCharuco(
+            markerCorners=marker_corners,
+            markerIds=marker_ids,
+            image=image,
+            board=self._cv_charuco_board,
+            cameraMatrix=camera_matrix,
+            distCoeffs=distortion_coefficients,
+            minMarkers=min_markers
+        )
+        chessboard_corners = np.squeeze(chessboard_corners)
+        chessboard_corner_ids = np.squeeze(chessboard_corner_ids)
+        return chessboard_corners, chessboard_corner_ids
+
     def detect_markers(
         self,
         image,
@@ -268,12 +301,12 @@ class ArucoDictionary:
         setattr(detector_parameters_object, 'cornerRefinementMaxIterations', corner_refinement_max_iterations)
         setattr(detector_parameters_object, 'cornerRefinementMinAccuracy', corner_refinement_accuracy)
         image_grayscale = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-        corners, ids, rejected_image_points = cv.aruco.detectMarkers(
+        marker_corners, marker_ids, rejected_image_points = cv.aruco.detectMarkers(
             image=image_grayscale,
             dictionary=self._cv_aruco_dictionary,
             parameters=detector_parameters_object
         )
-        corners = np.squeeze(np.stack(corners))
-        ids = np.squeeze(ids)
+        marker_corners = np.squeeze(np.stack(marker_corners))
+        marker_ids = np.squeeze(marker_ids)
         rejected_image_points = np.squeeze(np.stack(rejected_image_points))
-        return corners, ids, rejected_image_points
+        return marker_corners, marker_ids, rejected_image_points
