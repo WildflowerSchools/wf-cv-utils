@@ -1,6 +1,9 @@
 import cv_utils.core
 import cv2 as cv
 import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+import math
 import os
 import logging
 
@@ -486,10 +489,47 @@ class ArucoDictionary:
     def max_correction_bits(self):
         return self._cv_aruco_dictionary.maxCorrectionBits
 
+    def write_images(
+        self,
+        directory='.',
+        filename_prefix='marker',
+        filename_extension='png',
+        ids=None,
+        image_width_inches=10.5,
+        image_height_inches=8.0,
+        add_label=False,
+        image_size=1000,
+        num_border_squares=1
+    ):
+        num_digits = math.ceil(math.log10(self.num_markers))
+        if ids is None:
+            ids = range(self.num_markers)
+        for id in ids:
+            path = os.path.join(
+                directory,
+                '{{}}_{{:0{}d}}.{{}}'.format(num_digits).format(
+                    filename_prefix,
+                    id,
+                    filename_extension
+                )
+            )
+            self.write_image(
+                path=path,
+                id=id,
+                image_width_inches=image_width_inches,
+                image_height_inches=image_height_inches,
+                add_label=add_label,
+                image_size=image_size,
+                num_border_squares=num_border_squares
+            )
+
     def write_image(
         self,
         path,
         id,
+        image_width_inches=10.5,
+        image_height_inches=8.0,
+        add_label=True,
         image_size=1000,
         num_border_squares=1
     ):
@@ -501,10 +541,18 @@ class ArucoDictionary:
         logger.info('Writing image to \'{}\''.format(
             path
         ))
-        cv_utils.core.write_image(
-            image=image,
-            path=path
+        fig, ax = plt.subplots()
+        ax.imshow(
+            image,
+            cmap = matplotlib.cm.gray,
+            interpolation = "nearest"
         )
+        ax.axis('off')
+        if add_label:
+            ax.set_title(id)
+        fig.set_size_inches(image_width_inches, image_height_inches)
+        plt.savefig(path, facecolor='white', transparent=False)
+        plt.close()
 
     def create_image(
         self,
