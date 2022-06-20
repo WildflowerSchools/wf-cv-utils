@@ -135,56 +135,64 @@ class CharucoBoard:
     def write_image(
         self,
         path,
-        image_width=None,
-        image_height=None,
+        image_width_inches=10.5,
+        image_height_inches=8,
+        image_width_pixels=1000,
+        image_height_pixels=None,
         margin_size=0,
         num_border_squares=1
     ):
         image = self.create_image(
-            image_width=image_width,
-            image_height=image_height,
+            image_width_pixels=image_width_pixels,
+            image_height_pixels=image_height_pixels,
             margin_size=margin_size,
             num_border_squares=num_border_squares
         )
         logger.info('Writing image to \'{}\''.format(
             path
         ))
-        cv_utils.core.write_image(
-            image=image,
-            path=path
+        fig, ax = plt.subplots()
+        ax.imshow(
+            image,
+            cmap = matplotlib.cm.gray,
+            interpolation = "nearest"
         )
+        ax.axis('off')
+        fig.set_size_inches(image_width_inches, image_height_inches)
+        plt.savefig(path, facecolor='white', transparent=False)
+        plt.close()
 
     def create_image(
         self,
-        image_width=None,
-        image_height=None,
+        image_width_pixels=1000,
+        image_height_pixels=None,
         margin_size=0,
         num_border_squares=1
     ):
         image_aspect_ratio = self.num_squares_x/self.num_squares_y
-        if image_width is not None and image_height is not None:
+        if image_width_pixels is not None and image_height_pixels is not None:
             pass
-        elif image_width is not None and image_height is None:
+        elif image_width_pixels is not None and image_height_pixels is None:
             logger.info('Image width specified as {}. Inferring image height from ChArUco board aspect ratio'.format(
-                image_width
+                image_width_pixels
             ))
-            image_height = round(image_width/image_aspect_ratio)
-        elif image_width is None and image_height is not None:
+            image_height_pixels = round(image_width_pixels/image_aspect_ratio)
+        elif image_width_pixels is None and image_height_pixels is not None:
             logger.info('Image height specified as {}. Inferring image width from ChArUco board aspect ratio'.format(
-                image_height
+                image_height_pixels
             ))
-            image_width = round(image_height*image_aspect_ratio)
+            image_width_pixels = round(image_height_pixels*image_aspect_ratio)
         else:
             raise ValueError('Must specify either image width or image height (or both)')
-        image_size = (image_width, image_height)
+        image_size_pixels = (image_width_pixels, image_height_pixels)
         logger.info('Creating {}x{} ChArUco board image with {} border squares and margin of {} pixels'.format(
-            image_width,
-            image_height,
+            image_width_pixels,
+            image_height_pixels,
             num_border_squares,
             margin_size
         ))
         image = self._cv_charuco_board.draw(
-            outSize=image_size,
+            outSize=image_size_pixels,
             marginSize=margin_size,
             borderBits= num_border_squares
         )
@@ -498,7 +506,7 @@ class ArucoDictionary:
         image_width_inches=10.5,
         image_height_inches=8.0,
         add_label=False,
-        image_size=1000,
+        image_size_pixels=1000,
         num_border_squares=1
     ):
         num_digits = math.ceil(math.log10(self.num_markers))
@@ -519,7 +527,7 @@ class ArucoDictionary:
                 image_width_inches=image_width_inches,
                 image_height_inches=image_height_inches,
                 add_label=add_label,
-                image_size=image_size,
+                image_size_pixels=image_size_pixels,
                 num_border_squares=num_border_squares
             )
 
@@ -530,12 +538,12 @@ class ArucoDictionary:
         image_width_inches=10.5,
         image_height_inches=8.0,
         add_label=True,
-        image_size=1000,
+        image_size_pixels=1000,
         num_border_squares=1
     ):
         image = self.create_image(
             id=id,
-            image_size=image_size,
+            image_size_pixels=image_size_pixels,
             num_border_squares=num_border_squares
         )
         logger.info('Writing image to \'{}\''.format(
@@ -557,18 +565,18 @@ class ArucoDictionary:
     def create_image(
         self,
         id,
-        image_size=1000,
+        image_size_pixels=1000,
         num_border_squares=1
     ):
         logger.info('Creating {}x{} image of marker {} with {} border squares'.format(
-            image_size,
-            image_size,
+            image_size_pixels,
+            image_size_pixels,
             id,
             num_border_squares
         ))
         image=self._cv_aruco_dictionary.drawMarker(
             id=id,
-            sidePixels=image_size,
+            sidePixels=image_size_pixels,
             borderBits=num_border_squares
         )
         return image
