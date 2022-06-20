@@ -378,6 +378,22 @@ class CharucoBoard:
             logger.info('Found no ChArUco board corners')
         return chessboard_corners, chessboard_corner_ids
 
+    def draw_detected_markers(
+        self,
+        image,
+        marker_corners,
+        marker_ids,
+        rejected_image_points,
+        border_color='x00ff00'
+    ):
+        return self.aruco_dictionary.draw_detected_markers(
+            image=image,
+            marker_corners=marker_corners,
+            marker_ids=marker_ids,
+            rejected_image_points=rejected_image_points,
+            border_color=border_color
+        )
+
     def detect_markers(
         self,
         image,
@@ -578,6 +594,27 @@ class ArucoDictionary:
             id=id,
             sidePixels=image_size_pixels,
             borderBits=num_border_squares
+        )
+        return image
+
+    def draw_detected_markers(
+        self,
+        image,
+        marker_corners,
+        marker_ids,
+        rejected_image_points,
+        border_color='x00ff00'
+    ):
+        marker_corners_split=np.split(marker_corners, marker_corners.shape[0])
+        # marker_corners = np.squeeze(marker_corners).reshape((-1, 2))
+        # marker_ids = np.squeeze(marker_ids).reshape((-1))
+        # rejected_image_points = np.squeeze(rejected_image_points).reshape((-1))
+        border_color_bgr = cv_utils.color.hex_to_bgr(border_color)
+        image = cv.aruco.drawDetectedMarkers(
+            image=image,
+            corners=marker_corners_split,
+            ids=marker_ids,
+            borderColor=border_color_bgr
         )
         return image
 
