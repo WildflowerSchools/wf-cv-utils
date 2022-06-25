@@ -301,9 +301,9 @@ class CharucoBoard:
                             directory_entry.name
                         ))
                         image_filenames.append(directory_entry.name)
-                        chessboard_corner_ids_tuple, chessboard_corners_tuple = zip(*chessboard_corners_dict.items())
-                        chessboard_corner_ids_array = np.array(chessboard_corner_ids_tuple).reshape((-1, 1))
-                        chessboard_corners_array = np.array(np.stack(chessboard_corners_tuple)).reshape((-1, 1, 2))
+                        chessboard_corner_ids_array, chessboard_corners_array = convert_chessboard_corners_dict_to_arrays(
+                            chessboard_corners_dict
+                        )
                         chessboard_corner_ids_list.append(chessboard_corner_ids_array)
                         chessboard_corners_list.append(chessboard_corners_array)
                     else:
@@ -356,9 +356,9 @@ class CharucoBoard:
             corner_refinement_accuracy=marker_corner_refinement_accuracy,
             detector_parameters=marker_detector_parameters
         )
-        marker_ids_tuple, marker_corners_tuple = zip(*marker_corners_dict.items())
-        marker_ids_array = np.asarray(marker_ids_tuple).reshape(-1, 1)
-        marker_corners_list = [marker_corner_array.reshape(1, 4, 2) for marker_corner_array in marker_corners_tuple]
+        marker_ids_array, marker_corners_list = convert_marker_corners_dict_to_arrays(
+            marker_corners_dict
+        )
         logger.info('Interpolating corners')
         num_chessboard_corners, chessboard_corners, chessboard_corner_ids = cv.aruco.interpolateCornersCharuco(
             markerCorners=marker_corners_list,
@@ -369,23 +369,16 @@ class CharucoBoard:
             distCoeffs=distortion_coefficients,
             minMarkers=min_markers
         )
-        chessboard_corners = np.squeeze(chessboard_corners).reshape((-1, 2))
-        chessboard_corner_ids = np.squeeze(chessboard_corner_ids).reshape((-1))
-        if chessboard_corners.shape[0] != chessboard_corner_ids.shape[0]:
-            raise ValueError('Chessboard corners array should be same length as chessboard corner IDs array but chessboard corners array has shape {} while chessboard corner IDs array has shape {}'.format(
-                chessboard_corners.shape,
-                chessboard_corner_ids.shape
-            ))
-        if chessboard_corner_ids.shape[0] > 0:
-            chessboard_corner_ids_list = chessboard_corner_ids.tolist()
-            chessboard_corners_list = [np.squeeze(point_array) for point_array in np.split(chessboard_corners, chessboard_corners.shape[0])]
-            chessboard_corners_dict = dict(zip(chessboard_corner_ids_list, chessboard_corners_list))
+        chessboard_corners_dict = convert_chessboard_corner_arrays_to_dict(
+            chessboard_corner_ids=chessboard_corner_ids,
+            chessboard_corners=chessboard_corners
+        )
+        if len(chessboard_corners_dict) > 0:
             logger.info('Found {} ChArUco board corners (ids {})'.format(
                 len(chessboard_corners_dict),
                 ', '.join([str(chessboard_corner_id) for chessboard_corner_id in sorted(chessboard_corners_dict.keys())])
             ))
         else:
-            chessboard_corners_dict = dict()
             logger.info('Found no ChArUco board corners')
         return chessboard_corners_dict
 
@@ -613,9 +606,12 @@ class ArucoDictionary:
         rejected_image_points,
         border_color='x00ff00'
     ):
-        marker_ids_tuple, marker_corners_tuple = zip(*marker_corners_dict.items())
-        marker_ids_array = np.asarray(marker_ids_tuple).reshape(-1, 1)
-        marker_corners_list = [marker_corner_array.reshape(1, 4, 2) for marker_corner_array in marker_corners_tuple]
+        # marker_ids_tuple, marker_corners_tuple = zip(*marker_corners_dict.items())
+        # marker_ids_array = np.asarray(marker_ids_tuple).reshape(-1, 1)
+        # marker_corners_list = [marker_corner_array.reshape(1, 4, 2) for marker_corner_array in marker_corners_tuple]
+        marker_ids_array, marker_corners_list = convert_marker_corners_dict_to_arrays(
+            marker_corners_dict
+        )
         border_color_bgr = cv_utils.color.hex_to_bgr(border_color)
         image = cv.aruco.drawDetectedMarkers(
             image=image,
@@ -659,24 +655,75 @@ class ArucoDictionary:
             dictionary=self._cv_aruco_dictionary,
             parameters=detector_parameters_object
         )
-        marker_corners = np.squeeze(np.stack(marker_corners)).reshape((-1, 4, 2))
-        marker_ids = np.squeeze(marker_ids).reshape((-1))
-        rejected_image_points = np.squeeze(np.stack(rejected_image_points)).reshape((-1, 4, 2))
-        if marker_corners.shape[0] != marker_ids.shape[0]:
-            raise ValueError('Marker corners array should be same length as marker IDs array but marker corners array has shape {} while marker IDs array has shape {}'.format(
-                marker_corners.shape,
-                marker_ids.shape
-            ))
-        if marker_ids.shape[0] > 0:
-            marker_ids_list = marker_ids.tolist()
-            marker_corners_list = [np.squeeze(corners_array) for corners_array in np.split(marker_corners, marker_corners.shape[0])]
-            marker_corners_dict = dict(zip(marker_ids_list, marker_corners_list))
-            logger.info('Detected {} ArUco markers (ids {}). Rejected {} image points.'.format(
+        marker_corners_dict, rejected_image_points = convert_marker_corner_arrays_to_dict(
+            marker_ids=marker_ids,
+            marker_corners=marker_corners,
+            rejected_image_points=rejected_image_points
+        )
+        if len(marker_corners_dict) > 0:
+            logger.info('Detected {} ArUco markers (ids {}). Rejected {} image points'.format(
                 len(marker_corners_dict),
                 ', '.join([str(marker_id) for marker_id in sorted(marker_corners_dict.keys())]),
                 rejected_image_points.shape[0]
             ))
         else:
-            marker_corners_dict = dict()
-            logger.info('Detected no ArUco markers')
+            logger.info('Detected no ArUco markers. Rejected {} image points'.format(
+                rejected_image_points.shape[0]
+            ))
         return marker_corners_dict, rejected_image_points
+
+def convert_marker_corner_arrays_to_dict(
+    marker_ids,
+    marker_corners,
+    rejected_image_points
+):
+    marker_corners = np.squeeze(np.stack(marker_corners)).reshape((-1, 4, 2))
+    marker_ids = np.squeeze(marker_ids).reshape((-1))
+    rejected_image_points = np.squeeze(np.stack(rejected_image_points)).reshape((-1, 4, 2))
+    if marker_corners.shape[0] != marker_ids.shape[0]:
+        raise ValueError('Marker corners array should be same length as marker IDs array but marker corners array has shape {} while marker IDs array has shape {}'.format(
+            marker_corners.shape,
+            marker_ids.shape
+        ))
+    if marker_ids.shape[0] > 0:
+        marker_ids_list = marker_ids.tolist()
+        marker_corners_list = [np.squeeze(corners_array) for corners_array in np.split(marker_corners, marker_corners.shape[0])]
+        marker_corners_dict = dict(zip(marker_ids_list, marker_corners_list))
+    else:
+        marker_corners_dict = dict()
+    return marker_corners_dict, rejected_image_points
+
+def convert_marker_corners_dict_to_arrays(
+    marker_corners_dict
+):
+    marker_ids_tuple, marker_corners_tuple = zip(*marker_corners_dict.items())
+    marker_ids_array = np.asarray(marker_ids_tuple).reshape(-1, 1)
+    marker_corners_list = [marker_corner_array.reshape(1, 4, 2) for marker_corner_array in marker_corners_tuple]
+    return marker_ids_array, marker_corners_list
+
+def convert_chessboard_corner_arrays_to_dict(
+    chessboard_corner_ids,
+    chessboard_corners
+):
+    chessboard_corners = np.squeeze(chessboard_corners).reshape((-1, 2))
+    chessboard_corner_ids = np.squeeze(chessboard_corner_ids).reshape((-1))
+    if chessboard_corners.shape[0] != chessboard_corner_ids.shape[0]:
+        raise ValueError('Chessboard corners array should be same length as chessboard corner IDs array but chessboard corners array has shape {} while chessboard corner IDs array has shape {}'.format(
+            chessboard_corners.shape,
+            chessboard_corner_ids.shape
+        ))
+    if chessboard_corner_ids.shape[0] > 0:
+        chessboard_corner_ids_list = chessboard_corner_ids.tolist()
+        chessboard_corners_list = [np.squeeze(point_array) for point_array in np.split(chessboard_corners, chessboard_corners.shape[0])]
+        chessboard_corners_dict = dict(zip(chessboard_corner_ids_list, chessboard_corners_list))
+    else:
+        chessboard_corners_dict = dict()
+    return chessboard_corners_dict
+
+def convert_chessboard_corners_dict_to_arrays(
+    chessboard_corners_dict
+):
+    chessboard_corner_ids_tuple, chessboard_corners_tuple = zip(*chessboard_corners_dict.items())
+    chessboard_corner_ids_array = np.array(chessboard_corner_ids_tuple).reshape((-1, 1))
+    chessboard_corners_array = np.array(np.stack(chessboard_corners_tuple)).reshape((-1, 1, 2))
+    return chessboard_corner_ids_array, chessboard_corners_array
