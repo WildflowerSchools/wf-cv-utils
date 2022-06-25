@@ -284,7 +284,7 @@ class CharucoBoard:
                     logger.info('Finding ChArUco board corners in image {}'.format(
                         directory_entry.name
                     ))
-                    chessboard_corners, chessboard_corner_ids = self.find_chessboard_corners(
+                    chessboard_corners_dict = self.find_chessboard_corners(
                         image=image,
                         min_markers=min_markers,
                         camera_matrix=None,
@@ -295,14 +295,17 @@ class CharucoBoard:
                         marker_corner_refinement_accuracy=marker_corner_refinement_accuracy,
                         marker_detector_parameters=marker_detector_parameters
                     )
-                    if chessboard_corners is not None and chessboard_corners.shape[0] > min_chessboard_corners:
+                    if len(chessboard_corners_dict) > min_chessboard_corners:
                         logger.info('Found more than {} corners in {}. Adding to calibration data.'.format(
                             min_chessboard_corners,
                             directory_entry.name
                         ))
                         image_filenames.append(directory_entry.name)
-                        chessboard_corners_list.append(chessboard_corners.reshape((-1, 1, 2)))
-                        chessboard_corner_ids_list.append(chessboard_corner_ids.reshape((-1, 1)))
+                        chessboard_corner_ids_tuple, chessboard_corners_tuple = zip(*chessboard_corners_dict.items())
+                        chessboard_corner_ids_array = np.array(chessboard_corner_ids_tuple).reshape((-1, 1))
+                        chessboard_corners_array = np.array(np.stack(chessboard_corners_tuple)).reshape((-1, 1, 2))
+                        chessboard_corner_ids_list.append(chessboard_corner_ids_array)
+                        chessboard_corners_list.append(chessboard_corners_array)
                     else:
                         logger.info('Found fewer than {} corners. Rejecting image'.format(
                             min_chessboard_corners
@@ -345,7 +348,7 @@ class CharucoBoard:
             image.shape[0],
             min_markers
         ))
-        marker_corners, marker_ids, rejected_image_points = self.detect_markers(
+        marker_corners_dict, rejected_image_points = self.detect_markers(
             image=image,
             corner_refinement_method=marker_corner_refinement_method,
             corner_refinement_window_size=marker_corner_refinement_window_size,
@@ -353,10 +356,13 @@ class CharucoBoard:
             corner_refinement_accuracy=marker_corner_refinement_accuracy,
             detector_parameters=marker_detector_parameters
         )
+        marker_ids_tuple, marker_corners_tuple = zip(*marker_corners_dict.items())
+        marker_ids_array = np.asarray(marker_ids_tuple).reshape(-1, 1)
+        marker_corners_list = [marker_corner_array.reshape(1, 4, 2) for marker_corner_array in marker_corners_tuple]
         logger.info('Interpolating corners')
         num_chessboard_corners, chessboard_corners, chessboard_corner_ids = cv.aruco.interpolateCornersCharuco(
-            markerCorners=marker_corners,
-            markerIds=marker_ids,
+            markerCorners=marker_corners_list,
+            markerIds=marker_ids_array,
             image=image,
             board=self._cv_charuco_board,
             cameraMatrix=camera_matrix,
@@ -365,31 +371,34 @@ class CharucoBoard:
         )
         chessboard_corners = np.squeeze(chessboard_corners).reshape((-1, 2))
         chessboard_corner_ids = np.squeeze(chessboard_corner_ids).reshape((-1))
-        if chessboard_corners is not None and num_chessboard_corners > 1:
-            logger.info('Found {} ChArUco board corners (ids {})'.format(
-                num_chessboard_corners,
-                ', '.join([str(chessboard_corner_id) for chessboard_corner_id in np.sort(chessboard_corner_ids)])
+        if chessboard_corners.shape[0] != chessboard_corner_ids.shape[0]:
+            raise ValueError('Chessboard corners array should be same length as chessboard corner IDs array but chessboard corners array has shape {} while chessboard corner IDs array has shape {}'.format(
+                chessboard_corners.shape,
+                chessboard_corner_ids.shape
             ))
-        elif chessboard_corners is not None and num_chessboard_corners == 1:
-            logger.info('Found 1 ChArUco board corners (id {})'.format(
-                chessboard_corner_ids[0]
+        if chessboard_corner_ids.shape[0] > 0:
+            chessboard_corner_ids_list = chessboard_corner_ids.tolist()
+            chessboard_corners_list = [np.squeeze(point_array) for point_array in np.split(chessboard_corners, chessboard_corners.shape[0])]
+            chessboard_corners_dict = dict(zip(chessboard_corner_ids_list, chessboard_corners_list))
+            logger.info('Found {} ChArUco board corners (ids {})'.format(
+                len(chessboard_corners_dict),
+                ', '.join([str(chessboard_corner_id) for chessboard_corner_id in sorted(chessboard_corners_dict.keys())])
             ))
         else:
+            chessboard_corners_dict = dict()
             logger.info('Found no ChArUco board corners')
-        return chessboard_corners, chessboard_corner_ids
+        return chessboard_corners_dict
 
-    def draw_detected_markers(
+    def draw_detected_markers_opencv(
         self,
         image,
-        marker_corners,
-        marker_ids,
+        marker_corners_dict,
         rejected_image_points,
         border_color='x00ff00'
     ):
-        return self.aruco_dictionary.draw_detected_markers(
+        return self.aruco_dictionary.draw_detected_markers_opencv(
             image=image,
-            marker_corners=marker_corners,
-            marker_ids=marker_ids,
+            marker_corners_dict=marker_corners_dict,
             rejected_image_points=rejected_image_points,
             border_color=border_color
         )
@@ -597,23 +606,21 @@ class ArucoDictionary:
         )
         return image
 
-    def draw_detected_markers(
+    def draw_detected_markers_opencv(
         self,
         image,
-        marker_corners,
-        marker_ids,
+        marker_corners_dict,
         rejected_image_points,
         border_color='x00ff00'
     ):
-        marker_corners_split=np.split(marker_corners, marker_corners.shape[0])
-        # marker_corners = np.squeeze(marker_corners).reshape((-1, 2))
-        # marker_ids = np.squeeze(marker_ids).reshape((-1))
-        # rejected_image_points = np.squeeze(rejected_image_points).reshape((-1))
+        marker_ids_tuple, marker_corners_tuple = zip(*marker_corners_dict.items())
+        marker_ids_array = np.asarray(marker_ids_tuple).reshape(-1, 1)
+        marker_corners_list = [marker_corner_array.reshape(1, 4, 2) for marker_corner_array in marker_corners_tuple]
         border_color_bgr = cv_utils.color.hex_to_bgr(border_color)
         image = cv.aruco.drawDetectedMarkers(
             image=image,
-            corners=marker_corners_split,
-            ids=marker_ids,
+            corners=marker_corners_list,
+            ids=marker_ids_array,
             borderColor=border_color_bgr
         )
         return image
@@ -655,17 +662,21 @@ class ArucoDictionary:
         marker_corners = np.squeeze(np.stack(marker_corners)).reshape((-1, 4, 2))
         marker_ids = np.squeeze(marker_ids).reshape((-1))
         rejected_image_points = np.squeeze(np.stack(rejected_image_points)).reshape((-1, 4, 2))
-        if marker_corners is not None and marker_corners.shape[0] > 1:
-            logger.info('Detected {} ArUco markers (ids {}). Rejected {} image points.'.format(
-                marker_corners.shape[0],
-                ', '.join([str(marker_id) for marker_id in np.sort(marker_ids)]),
-                rejected_image_points.shape[0]
+        if marker_corners.shape[0] != marker_ids.shape[0]:
+            raise ValueError('Marker corners array should be same length as marker IDs array but marker corners array has shape {} while marker IDs array has shape {}'.format(
+                marker_corners.shape,
+                marker_ids.shape
             ))
-        elif marker_corners is not None and marker_corners.shape[0] == 1:
-            logger.info('Detected 1 ArUco marker (id {}). Rejected {} image points.'.format(
-                marker_ids[0],
+        if marker_ids.shape[0] > 0:
+            marker_ids_list = marker_ids.tolist()
+            marker_corners_list = [np.squeeze(corners_array) for corners_array in np.split(marker_corners, marker_corners.shape[0])]
+            marker_corners_dict = dict(zip(marker_ids_list, marker_corners_list))
+            logger.info('Detected {} ArUco markers (ids {}). Rejected {} image points.'.format(
+                len(marker_corners_dict),
+                ', '.join([str(marker_id) for marker_id in sorted(marker_corners_dict.keys())]),
                 rejected_image_points.shape[0]
             ))
         else:
+            marker_corners_dict = dict()
             logger.info('Detected no ArUco markers')
-        return marker_corners, marker_ids, rejected_image_points
+        return marker_corners_dict, rejected_image_points
