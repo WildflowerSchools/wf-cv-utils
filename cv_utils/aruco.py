@@ -331,6 +331,24 @@ class CharucoBoard:
             }
         return camera_matrix, distortion_coefficients, extrinsic_parameters
 
+    def draw_detected_chessboard_corners_opencv(
+        self,
+        image,
+        chessboard_corners_dict,
+        corner_color='x00ff00'
+    ):
+        chessboard_corner_ids_array, chessboard_corners_array = convert_chessboard_corners_dict_to_arrays(
+            chessboard_corners_dict
+        )
+        corner_color_bgr = cv_utils.color.hex_to_bgr(corner_color)
+        image = cv.aruco.drawDetectedCornersCharuco(
+            image=image,
+            charucoCorners=chessboard_corners_array,
+            charucoIds=chessboard_corner_ids_array,
+            cornerColor=corner_color_bgr
+        )
+        return image
+
     def find_chessboard_corners(
         self,
         image,
@@ -606,9 +624,6 @@ class ArucoDictionary:
         rejected_image_points,
         border_color='x00ff00'
     ):
-        # marker_ids_tuple, marker_corners_tuple = zip(*marker_corners_dict.items())
-        # marker_ids_array = np.asarray(marker_ids_tuple).reshape(-1, 1)
-        # marker_corners_list = [marker_corner_array.reshape(1, 4, 2) for marker_corner_array in marker_corners_tuple]
         marker_ids_array, marker_corners_list = convert_marker_corners_dict_to_arrays(
             marker_corners_dict
         )
