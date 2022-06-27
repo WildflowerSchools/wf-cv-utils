@@ -649,6 +649,41 @@ class ArucoDictionary:
         )
         return image
 
+    def estimate_camera_pose_from_detected_markers(
+        self,
+        marker_corners_dict,
+        marker_object_points_dict,
+        camera_matrix,
+        distortion_coefficients,
+        use_extrinsic_guess = False,
+        rotation_vector=None,
+        translation_vector=None
+    ):
+        image_points_list = list()
+        object_points_list = list()
+        for marker_id, object_point in marker_object_points_dict.items():
+            if marker_id in marker_corners_dict:
+                object_points_list.append(object_point)
+                image_points_list.append(marker_corners_dict[marker_id][0])
+        if len(object_points_list) < 4:
+            raise ValueError('Camera pose estimation requires at least 4 detected markers with known object coordinates. Detected markers: {}. Markers with known object coordinates: {}. Detected markers with known object coordinates: {}'.format(
+                len(marker_corners_dict),
+                len(marker_object_points_dict),
+                len(object_points_list)
+            ))
+        object_points = np.stack(object_points_list).reshape((-1, 3))
+        image_points = np.stack(image_points_list).reshape((-1, 1, 2))
+        retval, rotation_vector, translation_vector = cv.solvePnP(
+            objectPoints=object_points,
+            imagePoints=image_points,
+            cameraMatrix=camera_matrix,
+            distCoeffs=distortion_coefficients,
+            rvec=rotation_vector,
+            tvec=translation_vector,
+            useExtrinsicGuess=use_extrinsic_guess
+        )
+        return rotation_vector, translation_vector
+
     def draw_detected_markers_opencv(
         self,
         image,
