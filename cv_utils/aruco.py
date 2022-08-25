@@ -539,12 +539,12 @@ class ArucoDictionary:
         path
     ):
         raise NotImplementedError()
-        fs = cv.FileStorage(
-            filename=path,
-            flags=cv.FILE_STORAGE_WRITE
-        )
-        self._cv_aruco_dictionary.writeDictionary(fs)
-        fs.release()
+        # fs = cv.FileStorage(
+        #     filename=path,
+        #     flags=cv.FILE_STORAGE_WRITE
+        # )
+        # self._cv_aruco_dictionary.writeDictionary(fs)
+        # fs.release()
 
     @classmethod
     def load(
@@ -552,18 +552,18 @@ class ArucoDictionary:
         path
     ):
         raise NotImplementedError()
-        fs = cv.FileStorage(
-            filename=path,
-            flags=cv.FILE_STORAGE_READ
-        )
-        fn = fs.root()
-        cv_aruco_dictionary = cv.aruco.Dictionary.readDictionary(fn)
-        fs.release()
-        return cls(
-            num_markers=cv_aruco_dictionary.bytesList.shape[0],
-            marker_size=_cv_aruco_dictionary.markerSize,
-            _cv_aruco_dictionary=cv_aruco_dictionary
-        )
+        # fs = cv.FileStorage(
+        #     filename=path,
+        #     flags=cv.FILE_STORAGE_READ
+        # )
+        # fn = fs.root()
+        # cv_aruco_dictionary = cv.aruco.Dictionary.readDictionary(fn)
+        # fs.release()
+        # return cls(
+        #     num_markers=cv_aruco_dictionary.bytesList.shape[0],
+        #     marker_size=_cv_aruco_dictionary.markerSize,
+        #     _cv_aruco_dictionary=cv_aruco_dictionary
+        # )
 
     def write_images(
         self,
