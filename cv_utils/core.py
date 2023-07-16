@@ -6,6 +6,83 @@ import numpy as np
 import json
 import os
 
+def termination_criteria(
+    max_iterations=10000,
+    accuracy=1e-9
+):
+    termination_criteria = (cv.TERM_CRITERIA_COUNT & cv.TERM_CRITERIA_EPS, max_iterations, accuracy)
+    return termination_criteria
+
+def camera_calibration_flags(
+    use_intrinsic_guess=False,
+    fix_principal_point=False,
+    fix_aspect_ratio=False,
+    zero_tangent_distortion=False,
+    fix_focal_length=False,
+    fix_k1=False,
+    fix_k2=False,
+    fix_k3=False,
+    fix_k4=False,
+    fix_k5=False,
+    fix_k6=False,
+    rational_model=False,
+    thin_prism_model=False,
+    fix_s1_s2_s3_s4=False,
+    tilted_model=False,
+    fix_taux_tauy=False,
+):
+    flags = 0
+    flag_descriptions=list()
+    if use_intrinsic_guess:
+        flags += cv.CALIB_USE_INTRINSIC_GUESS
+        flag_descriptions.append('use intrinsic guess')
+    if fix_principal_point:
+        flags += cv.CALIB_FIX_PRINCIPAL_POINT
+        flag_descriptions.append('fix principal point')
+    if fix_aspect_ratio:
+        flags += cv.CALIB_FIX_ASPECT_RATIO
+        flag_descriptions.append('fix aspect ratio')
+    if zero_tangent_distortion:
+        flags += cv.CALIB_ZERO_TANGENT_DIST
+        flag_descriptions.append('zero tangent distortion')
+    if fix_focal_length:
+        flags += cv.CALIB_FIX_FOCAL_LENGTH
+        flag_descriptions.append('fix focal length')
+    if fix_k1:
+        flags += cv.CALIB_FIX_K1
+        flag_descriptions.append('fix k_1')
+    if fix_k2:
+        flags += cv.CALIB_FIX_K2
+        flag_descriptions.append('fix k_2')
+    if fix_k3:
+        flags += cv.CALIB_FIX_K3
+        flag_descriptions.append('fix k_3')
+    if fix_k4:
+        flags += cv.CALIB_FIX_K4
+        flag_descriptions.append('fix k_4')
+    if fix_k5:
+        flags += cv.CALIB_FIX_K5
+        flag_descriptions.append('fix k_5')
+    if fix_k6:
+        flags += cv.CALIB_FIX_K6
+        flag_descriptions.append('fix k_6')
+    if rational_model:
+        flags += cv.CALIB_RATIONAL_MODEL
+        flag_descriptions.append('rational model')
+    if thin_prism_model:
+        flags += cv.CALIB_THIN_PRISM_MODEL
+        flag_descriptions.append('thin prism model')
+    if fix_s1_s2_s3_s4:
+        flags += cv.CALIB_FIX_S1_S2_S3_S4
+        flag_descriptions.append('fix s_1/s_2/s_3/s_4')
+    if tilted_model:
+        flags += cv.CALIB_TILTED_MODEL
+        flag_descriptions.append('tilted model')
+    if fix_taux_tauy:
+        flags += cv.CALIB_FIX_TAUX_TAUY
+        flag_descriptions.append('fix tau_x/tau_y')
+    return flags, flag_descriptions
+
 def compose_transformations(
         rotation_vector_1,
         translation_vector_1,
@@ -794,3 +871,7 @@ def write_image(
         filename=path,
         img=image
     )
+
+def read_image(path):
+    image = cv.imread(path)
+    return image
