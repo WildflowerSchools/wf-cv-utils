@@ -18,34 +18,25 @@ def fetch_colmap_image_data_local(
     """
     Fetches data from COLMAP images output file and assembles into dataframe.
 
-    The script parses the COLMAP images output file, extracting the COLMAP
-    image ID, COLMAP camera ID, image path, quaternion vector, and translation
-    vector for each image.
+    The script parses the COLMAP images output file, extracting the COLMAP image
+    ID, COLMAP camera ID, image path, quaternion vector, and translation vector
+    for each image.
 
     For each image, it then calculates a rotation vector from the quaternion
     vector; calculates a camera position from the rotation vector and
-    translation vector; parses the image path into its subdirectory, filename
-    stem, and filename extension; and fetches camera names from Honeycomb (if
-    image filename stem matches a recognized camera device ID).
+    translation vector; and parses the image path into its subdirectory,
+    filename stem, and filename extension.
 
     By default, the script assumes that the COLMAP images output is in a file
     called images.txt in the directory
     calibration_directory/calibration_identifier. These are the also the default
-    path and naming conventions for COLMAP and for prepare_colmap_inputs().
-    Alternatively, the user can explicitly specify the path for the COLMAP
-    images output file.
+    path and naming conventions for COLMAP. Alternatively, the user can
+    explicitly specify the path for the COLMAP images output file.
 
     Args:
         calibration_directory (str): Path to directory containing calibrations
         calibration_identifier (str): Identifier for this particular calibration
         path (str): Explicit path for COLMAP image output file (default is None)
-        chunk_size (int): Number of objects to request at a time when querying Honeycomb (default is 100)
-        client (MinimalHoneycombClient): Client object to use when connecting with Honeycomb (default is None)
-        uri (str): URI to use for Honeycomb client (default is None)
-        token_uri (str): Token URI to use for Honeycomb client (default is None)
-        audience (str): Audience to use for Honeycomb client (default is None)
-        client_id (str): Client ID to use for Honeycomb client (default is None)
-        client_secret (str): Client secret to use for Honeycomb client (default is None)
 
     Returns:
         (DataFrame) Dataframe containing image data
