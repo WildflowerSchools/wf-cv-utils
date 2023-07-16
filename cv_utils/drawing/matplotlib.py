@@ -1,6 +1,10 @@
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 # Fetch an image from a local image file and return it in OpenCV format
 def fetch_image_from_local_drive(image_path):
