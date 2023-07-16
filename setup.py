@@ -9,7 +9,6 @@ BASE_DEPENDENCIES = [
     'opencv-python>=4.5.1',
     'pandas>=1.2.2',
     'numpy>=1.20.1',
-    # 'scipy>=1.6.0',
     'matplotlib>=3.3.4'
 ]
 

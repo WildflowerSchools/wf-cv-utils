@@ -2,7 +2,6 @@ import cv_datetime_utils
 import cv2 as cv
 import numpy as np
 # import matplotlib.pyplot as plt
-# import scipy.optimize
 import json
 import os
 
@@ -234,25 +233,6 @@ def extract_camera_direction(
         np.array([[0.0], [0.0], [1.0]]))
     camera_direction = np.squeeze(camera_direction)
     return camera_direction
-
-
-def reconstruct_z_rotation(x, y):
-    if x >= 0.0 and y >= 0.0:
-        return np.arctan(y / x)
-    if x >= 0.0 and y < 0.0:
-        return np.arctan(y / x) + 2 * np.pi
-    return np.arctan(y / x) + np.pi
-
-
-# Currently unused; needs to be fixed up for cases in which x and/or y are close
-# to zero
-def extract_yaw_from_camera_direction(
-        camera_direction):
-    camera_direction = np.asarray(camera_direction).reshape(3)
-    yaw = reconstruct_z_rotation(
-        camera_direction[0],
-        camera_direction[1])
-    return yaw
 
 
 def generate_camera_matrix(
@@ -495,7 +475,6 @@ def outside_frame(
     )
     return outside_frame_boolean
 
-
 def undistort_points(
         image_points,
         camera_matrix,
@@ -684,181 +663,6 @@ def reconstruct_object_points_from_image_points(
         rotation_vector_2,
         translation_vector_2)
     return object_points
-
-
-def estimate_camera_pose_from_plane_object_points(
-        input_object_points,
-        height,
-        origin_index,
-        x_axis_index,
-        y_reference_point,
-        y_reference_point_sign,
-        distance_calibration_indices,
-        calibration_distance):
-    input_object_points = np.asarray(input_object_points)
-    if input_object_points.size == 0:
-        raise ValueError('Obect point array appears to be empty')
-    input_object_points = input_object_points.reshape((-1, 3))
-
-    scale_factor = np.divide(
-        calibration_distance,
-        np.linalg.norm(
-            np.subtract(
-                input_object_points[distance_calibration_indices[0]],
-                input_object_points[distance_calibration_indices[1]])))
-
-    object_points_1 = np.multiply(
-        input_object_points,
-        scale_factor)
-
-    def objective_function(parameters):
-        rotation_x = parameters[0]
-        rotation_y = parameters[1]
-        translation_z = parameters[2]
-        object_points_transformed = transform_object_points(
-            object_points_1,
-            np.array([rotation_x, rotation_y, 0.0]),
-            np.array([0.0, 0.0, translation_z]))
-        return np.sum(np.square(object_points_transformed[:, 2] - height))
-
-    optimization_solution = scipy.optimize.minimize(
-        objective_function,
-        np.array([0.0, 0.0, 0.0]))
-
-    rotation_x_a = optimization_solution['x'][0]
-    rotation_y_a = optimization_solution['x'][1]
-    translation_z_a = optimization_solution['x'][2]
-
-    rotation_x_rotation_y_a_norm = np.linalg.norm([rotation_x_a, rotation_y_a])
-
-    rotation_x_b = rotation_x_a * ((rotation_x_rotation_y_a_norm + np.pi) / rotation_x_rotation_y_a_norm)
-    rotation_y_b = rotation_y_a * ((rotation_x_rotation_y_a_norm + np.pi) / rotation_x_rotation_y_a_norm)
-    translation_z_b = - translation_z_a
-
-    rotation_vector_2_a = np.array([rotation_x_a, rotation_y_a, 0.0])
-    translation_vector_2_a = np.array([0.0, 0.0, translation_z_a])
-    object_points_2_a = transform_object_points(
-        object_points_1,
-        rotation_vector_2_a,
-        translation_vector_2_a)
-
-    rotation_vector_2_b = np.array([rotation_x_b, rotation_y_b, 0.0])
-    translation_vector_2_b = np.array([0.0, 0.0, translation_z_b])
-    object_points_2_b = transform_object_points(
-        object_points_1,
-        rotation_vector_2_b,
-        translation_vector_2_b)
-
-    sign_a = np.sign(
-        np.cross(
-            np.subtract(
-                object_points_2_a[x_axis_index],
-                object_points_2_a[origin_index]),
-            np.subtract(
-                object_points_2_a[y_reference_point],
-                object_points_2_a[origin_index]))[2])
-
-    sign_b = np.sign(
-        np.cross(
-            np.subtract(
-                object_points_2_b[x_axis_index],
-                object_points_2_b[origin_index]),
-            np.subtract(
-                object_points_2_b[y_reference_point],
-                object_points_2_b[origin_index]))[2])
-
-    if sign_a == y_reference_point_sign:
-        rotation_vector_2 = rotation_vector_2_a
-        translation_vector_2 = translation_vector_2_a
-        object_points_2 = object_points_2_a
-    else:
-        rotation_vector_2 = rotation_vector_2_b
-        translation_vector_2 = translation_vector_2_b
-        object_points_2 = object_points_2_b
-
-    xy_shift = - object_points_2[origin_index, :2]
-
-    rotation_vector_3 = np.array([0.0, 0.0, 0.0])
-    translation_vector_3 = np.array([xy_shift[0], xy_shift[1], 0.0])
-    object_points_3 = transform_object_points(
-        object_points_2,
-        rotation_vector_3,
-        translation_vector_3)
-
-    final_z_rotation = - reconstruct_z_rotation(
-        object_points_3[x_axis_index, 0],
-        object_points_3[x_axis_index, 1])
-
-    rotation_vector_4 = np.array([0.0, 0.0, final_z_rotation])
-    translation_vector_4 = np.array([0.0, 0.0, 0.0])
-    object_points_4 = transform_object_points(
-        object_points_3,
-        rotation_vector_4,
-        translation_vector_4)
-
-    rotation_vector_2_3, translation_vector_2_3 = compose_transformations(
-        rotation_vector_2,
-        translation_vector_2,
-        rotation_vector_3,
-        translation_vector_3)
-
-    rotation_vector_2_3_4, translation_vector_2_3_4 = compose_transformations(
-        rotation_vector_2_3,
-        translation_vector_2_3,
-        rotation_vector_4,
-        translation_vector_4)
-
-    camera_rotation_vector, camera_translation_vector = invert_transformation(
-        rotation_vector_2_3_4,
-        translation_vector_2_3_4)
-
-    return camera_rotation_vector, camera_translation_vector, scale_factor, object_points_4
-
-
-def estimate_camera_poses_from_plane_image_points(
-        image_points_1,
-        image_points_2,
-        camera_matrix,
-        height,
-        origin_index,
-        x_axis_index,
-        y_reference_point,
-        y_reference_point_sign,
-        distance_calibration_indices,
-        calibration_distance):
-    image_points_1 = np.asarray(image_points_1)
-    image_points_2 = np.asarray(image_points_2)
-    camera_matrix = np.asarray(camera_matrix)
-    if image_points_1.size == 0 or image_points_2.size == 0:
-        raise ValueError('One or both sets of image points appear to be empty')
-    image_points_1 = image_points_1.reshape((-1, 2))
-    image_points_2 = image_points_2.reshape((-1, 2))
-    if image_points_1.shape != image_points_2.shape:
-        raise ValueError('Sets of image points do not appear to be the same shape')
-    camera_matrix = camera_matrix.reshape((3, 3))
-    relative_rotation_vector, relative_translation_vector = estimate_camera_pose_from_image_points(
-        image_points_1,
-        image_points_2,
-        camera_matrix)
-    input_object_points = reconstruct_object_points_from_image_points(
-        image_points_1,
-        image_points_2,
-        camera_matrix)
-    rotation_vector_1, translation_vector_1, scale_factor = estimate_camera_pose_from_plane_object_points(
-        input_object_points,
-        height,
-        origin_index,
-        x_axis_index,
-        y_reference_point,
-        y_reference_point_sign,
-        distance_calibration_indices,
-        calibration_distance)[:3]
-    rotation_vector_2, translation_vector_2 = compose_transformations(
-        rotation_vector_1,
-        translation_vector_1,
-        relative_rotation_vector,
-        relative_translation_vector * scale_factor)
-    return rotation_vector_1, translation_vector_1, rotation_vector_2, translation_vector_2
 
 def write_image(
     image,
