@@ -9,6 +9,59 @@ logger = logging.getLogger(__name__)
 
 CALIBRATION_DATA_RE = r'(?P<colmap_image_id>[0-9]+) (?P<qw>[-0-9.]+) (?P<qx>[-0-9.]+) (?P<qy>[-0-9.]+) (?P<qz>[-0-9.]+) (?P<tx>[-0-9.]+) (?P<ty>[-0-9.]+) (?P<tz>[-0-9.]+) (?P<colmap_camera_id>[0-9]+) (?P<image_path>.+)'
 
+def fetch_colmap_output_data_local(
+    calibration_directory=None,
+    calibration_identifier=None,
+    image_data_path=None,
+    camera_data_path=None,
+    ref_images_data_path=None
+):
+    """
+    Fetches data from COLMAP input and output files and assembles into dataframe.
+
+    The script essentially executes fetch_colmap_image_data_local(),
+    fetch_colmap_camera_data_local(), and
+    fetch_colmap_reference_image_data_local(); joins their outputs; calculates
+    the difference between the camera position inputs and the camera position
+    outputs; and assembles everything into a dataframe.
+
+    For details, see documentation for the constituent functions.
+
+    Args:
+        calibration_directory (str): Path to directory containing calibrations
+        calibration_identifier (str): Identifier for this particular calibration
+        image_data_path (str): Explicit path for COLMAP images output file (default is None)
+        camera_data_path (str): Explicit path for COLMAP cameras output file (default is None)
+        ref_images_data_path (str): Explicit path for COLMAP ref images input file (default is None)
+
+    Returns:
+        (DataFrame) Dataframe containing COLMAP output data
+    """
+    # Fetch COLMAP image output
+    df = fetch_colmap_image_data_local(
+        calibration_directory=calibration_directory,
+        calibration_identifier=calibration_identifier,
+        path=image_data_path
+    )
+    # Fetch COLMAP cameras output
+    cameras_df = fetch_colmap_camera_data_local(
+        calibration_directory=calibration_directory,
+        calibration_identifier=calibration_identifier,
+        path=camera_data_path
+    )
+    df = df.join(cameras_df, on='colmap_camera_id')
+    # Fetch COLMAP ref images input
+    ref_images_df = fetch_colmap_reference_image_data_local(
+        calibration_directory=calibration_directory,
+        calibration_identifier=calibration_identifier,
+        path=ref_images_data_path
+    )
+    df = df.join(ref_images_df, on='image_path')
+    # Calculate fields
+    df['image_path'] = df['image_path'].astype('string')
+    df['position_error'] = df['position'] - df['position_input']
+    df['position_error_distance'] = df['position_error'].apply(np.linalg.norm)
+    return df
 
 def fetch_colmap_image_data_local(
     calibration_directory=None,
