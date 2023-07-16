@@ -327,3 +327,65 @@ def colmap_parameters_to_opencv_parameters(colmap_parameters, colmap_camera_mode
         [0.0, 0.0, 1.0]
     ])
     return camera_matrix, distortion_coefficients
+
+def fetch_colmap_reference_image_data_local(
+    calibration_directory=None,
+    calibration_identifier=None,
+    path=None
+):
+    """
+    Fetches data from COLMAP ref images input file and assembles into dataframe.
+
+    The script parses the COLMAP ref images input file, extracting the image
+    path and (input) camera position for each image (for comparison with the
+    calculated camera position).
+
+    By default, the script assumes that the COLMAP ref images input data is in a
+    file called ref_images.txt in the directory
+    calibration_directory/calibration_identifier. These are the also the default
+    path and naming conventions for COLMAP. Alternatively, the user can
+    explicitly specify the path for the COLMAP ref images output file.
+
+    Args:
+        calibration_directory (str): Path to directory containing calibrations
+        calibration_identifier (str): Identifier for this particular calibration
+        path (str): Explicit path for COLMAP ref images input file (default is
+        None)
+
+    Returns:
+        (DataFrame) Dataframe containing camera position input data
+    """
+    if path is None:
+        if calibration_directory is None or calibration_identifier is None:
+            raise ValueError('Must specify either ref image data path or calibration directory and calibration identifier')
+        path = os.path.join(
+            calibration_directory,
+            calibration_identifier,
+            'ref_images.txt'
+        )
+    df = pd.read_csv(
+        path,
+        header=None,
+        delim_whitespace=True,
+        names = ['image_path', 'x', 'y', 'z'],
+        dtype={
+            'image_path': 'string',
+            'x': 'float',
+            'y': 'float',
+            'z': 'float',
+        }
+    )
+    df['position_input'] = df.apply(
+        lambda row: np.array([row['x'], row['y'], row['z']]),
+        axis=1
+    )
+    df = (
+        df
+        .reindex(columns=[
+            'image_path',
+            'position_input',
+        ])
+        .set_index('image_path')
+    )
+    return df
+
