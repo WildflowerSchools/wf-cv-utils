@@ -1,3 +1,6 @@
+import logging
+
+logger = logging.getLogger(__name__)
 
 def hex_to_rgb(color_hex):
     red, green, blue = bytes.fromhex(color_hex.lstrip('#'))

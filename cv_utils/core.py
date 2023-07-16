@@ -1,6 +1,10 @@
 import cv2 as cv
 import numpy as np
 import os
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def termination_criteria(
     max_iterations=10000,

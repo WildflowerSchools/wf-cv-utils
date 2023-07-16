@@ -3,6 +3,9 @@ import cv_utils.color
 import pandas as pd
 import numpy as np
 import math
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 MARKER_DICT = {
