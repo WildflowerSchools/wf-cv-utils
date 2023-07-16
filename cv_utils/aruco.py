@@ -1,4 +1,5 @@
-import cv_utils
+import cv_utils.core
+import cv_utils.color
 import cv2 as cv
 import numpy as np
 import matplotlib
@@ -229,11 +230,11 @@ class CharucoBoard:
         marker_corner_refinement_accuracy=0.1,
         marker_detector_parameters=None
     ):
-        calibration_termination_criteria = cv_utils.termination_criteria(
+        calibration_termination_criteria = cv_utils.core.termination_criteria(
             max_iterations=calibration_max_iterations,
             accuracy=calibration_accuracy
         )
-        calibration_flags, calibration_flag_descriptions = cv_utils.camera_calibration_flags(
+        calibration_flags, calibration_flag_descriptions = cv_utils.core.camera_calibration_flags(
             use_intrinsic_guess=use_intrinsic_guess,
             fix_principal_point=fix_principal_point,
             fix_aspect_ratio=fix_aspect_ratio,
@@ -276,7 +277,7 @@ class CharucoBoard:
                     logger.info('Fetching calibration image \'{}\''.format(
                         directory_entry.name
                     ))
-                    image=cv_utils.read_image(directory_entry.path)
+                    image=cv_utils.core.read_image(directory_entry.path)
                     if image_shape is None:
                         image_shape = image.shape
                     else:
