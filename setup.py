@@ -5,7 +5,6 @@ BASEDIR = os.path.dirname(os.path.abspath(__file__))
 VERSION = open(os.path.join(BASEDIR, 'VERSION')).read().strip()
 
 BASE_DEPENDENCIES = [
-    'wf-cv-datetime-utils>=0.1.0',
     'opencv-python>=4.5.1',
     'pandas>=1.2.2',
     'numpy>=1.20.1',
