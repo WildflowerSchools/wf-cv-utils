@@ -239,7 +239,6 @@ def fetch_colmap_camera_data_local(
         'camera_matrix': 'object',
         'distortion_coefficients': 'object'
     })
-    df.set_index('colmap_camera_id', inplace=True)
     df = (
         df
         .reindex(columns=[
