@@ -1,6 +1,6 @@
 import cv_utils.core
 import cv_utils.eager_video_capture as vc_queue
-import cv2 as cv
+import cv2
 import pandas as pd
 import datetime
 import os
@@ -11,43 +11,60 @@ logger = logging.getLogger(__name__)
 
 class VideoInput:
     def __init__(
-        self,
-        input_path,
-        start_time=None,
-        queue_frames=True,
-        queue_size=64
+            self,
+            input_path,
+            start_time=None,
+            queue_frames=True,
+            queue_size=64,
+            use_cvcuda=False,
+            use_gpu=False
     ):
         if not os.path.isfile(input_path):
             raise ValueError('No file at specified path: {}'.format(input_path))
 
+        video_details = cv2.VideoCapture(input_path)
+        self.video_parameters = VideoParameters(
+            start_time=start_time,
+            frame_width=video_details.get(cv2.CAP_PROP_FRAME_WIDTH),
+            frame_height=video_details.get(cv2.CAP_PROP_FRAME_HEIGHT),
+            fps=video_details.get(cv2.CAP_PROP_FPS),
+            frame_count=video_details.get(cv2.CAP_PROP_FRAME_COUNT),
+            fourcc_int=video_details.get(cv2.CAP_PROP_FOURCC)
+        )
+        video_details.release()
+
+        if use_gpu:
+            if use_cvcuda:
+                self.video_reader = cv2.cudacodec.createVideoReader(
+                    filename=input_path
+                )
+                self.video_reader.set(colorFormat=cv2.cudacodec.ColorFormat_BGR)
+            else:
+                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"]="hwaccel;cuvid|video_codec;h264_cuvid"
+                self.video_reader = cv2.VideoCapture(input_path, cv2.CAP_FFMPEG, (cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY))
+        else:
+            self.video_reader = cv2.VideoCapture(filename=input_path, apiPreference=cv2.CAP_FFMPEG)
+
         self.queue_frames = queue_frames
 
         if self.queue_frames:
-            self.video_queue = vc_queue.EagerVideoCapture(input_path, queue_size=queue_size)
-            self.capture_object = self.video_queue.capture_object
+            self.video_queue = vc_queue.EagerVideoCapture(input_path, video_reader=self.video_reader, queue_size=queue_size)
         else:
             self.video_queue = None
-            self.capture_object = cv.VideoCapture(input_path)
-
-        self.video_parameters = VideoParameters(
-            start_time=start_time,
-            frame_width=self.capture_object.get(cv.CAP_PROP_FRAME_WIDTH),
-            frame_height=self.capture_object.get(cv.CAP_PROP_FRAME_HEIGHT),
-            fps=self.capture_object.get(cv.CAP_PROP_FPS),
-            frame_count=self.capture_object.get(cv.CAP_PROP_FRAME_COUNT),
-            fourcc_int=self.capture_object.get(cv.CAP_PROP_FOURCC)
-        )
 
     def is_opened(self):
-        return self.capture_object.isOpened()
+        if isinstance(self.video_reader, cv2.VideoCapture):
+            return self.video_reader.isOpened()
+        return True
 
     def close(self):
-        self.capture_object.release()
+        if isinstance(self.video_reader, cv2.VideoCapture):
+            self.video_reader.release()
 
     def write_frame_by_timestamp(
-        self,
-        timestamp,
-        path
+            self,
+            timestamp,
+            path
     ):
         image=self.get_frame_by_timestamp(timestamp)
         cv_utils.core.write_image(
@@ -56,9 +73,9 @@ class VideoInput:
         )
 
     def write_frame_by_frame_number(
-        self,
-        frame_number,
-        path
+            self,
+            frame_number,
+            path
     ):
         image = self.get_frame_by_frame_number(frame_number)
         cv_utils.core.write_image(
@@ -67,9 +84,9 @@ class VideoInput:
         )
 
     def write_frame_by_milliseconds(
-        self,
-        milliseconds,
-        path
+            self,
+            milliseconds,
+            path
     ):
         image = self.get_frame_by_milliseconds(milliseconds)
         cv_utils.core.write_image(
@@ -98,24 +115,28 @@ class VideoInput:
         return self.get_frame_by_frame_number(frame_number)
 
     def get_frame_by_frame_number(self, frame_number):
-        self.capture_object.set(cv.CAP_PROP_POS_FRAMES, frame_number)
+        self.video_reader.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
         return self.get_frame()
 
     def get_frame_by_milliseconds(self, milliseconds):
-        self.capture_object.set(cv.CAP_PROP_POS_MSEC, milliseconds)
+        self.video_reader.set(cv2.CAP_PROP_POS_MSEC, milliseconds)
         return self.get_frame()
 
     def get_frame(self):
+        success, frame = False, None
         if self.queue_frames:
             # Wait to start queue until the first frame is needed. This is in case
             # additional VideoCaptureProperties need to be applied before the
-            # video begins streaming (i.e. cv.CAP_PROP_POS_FRAMES - start frame)
+            # video begins streaming (i.e. cv2.CAP_PROP_POS_FRAMES - start frame)
             self.video_queue.start()
-            ret, frame = self.video_queue.read()
+            success, frame = self.video_queue.read()
         else:
-            ret, frame = self.capture_object.read()
+            if isinstance(self.video_reader, cv2.VideoCapture):
+                (success, frame) = self.video_reader.read()
+            elif isinstance(self.video_reader, cv2.cudacodec.VideoReader):
+                (success, frame) = self.video_reader.nextFrame()
 
-        if ret:
+        if success:
             return frame
         else:
             return None
@@ -123,12 +144,12 @@ class VideoInput:
 
 class VideoOutput:
     def __init__(
-        self,
-        output_path,
-        video_parameters
+            self,
+            output_path,
+            video_parameters
     ):
         self.video_parameters = video_parameters
-        self.writer_object = cv.VideoWriter(
+        self.writer_object = cv2.VideoWriter(
             output_path,
             fourcc=self.video_parameters.fourcc_int,
             fps=self.video_parameters.fps,
@@ -150,13 +171,13 @@ class VideoOutput:
 
 class VideoParameters:
     def __init__(
-        self,
-        start_time=None,
-        frame_width=None,
-        frame_height=None,
-        fps=None,
-        frame_count=None,
-        fourcc_int=None
+            self,
+            start_time=None,
+            frame_width=None,
+            frame_height=None,
+            fps=None,
+            frame_count=None,
+            fourcc_int=None
     ):
         self.start_time = None
         self.frame_width = None
@@ -175,8 +196,8 @@ class VideoParameters:
             # except Exception as e:
             #     try:
             #         self.start_time = datetime.fromisoformat(start_time).astimezone(datetime.timezone.utc)
-                # except Exception as e:
-                #     raise ValueError('Cannot parse start time: {}'.format(start_time))
+            # except Exception as e:
+            #     raise ValueError('Cannot parse start time: {}'.format(start_time))
         if frame_width is not None:
             try:
                 self.frame_width = int(frame_width)
@@ -205,7 +226,7 @@ class VideoParameters:
 
 
 def fourcc_string_to_int(fourcc_string):
-    return cv.VideoWriter_fourcc(*fourcc_string)
+    return cv2.VideoWriter_fourcc(*fourcc_string)
 
 
 def fourcc_int_to_string(fourcc_int):
