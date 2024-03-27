@@ -76,7 +76,7 @@ class EagerVideoCapture:
                 # read the next frame from the file
                 if isinstance(self.video_reader, cv2.VideoCapture):
                     (grabbed, frame) = self.video_reader.read()
-                elif isinstance(self.video_reader, cv2.cudacodec.VideoReader):
+                elif hasattr(cv2, 'cudacodec') and isinstance(self.video_reader, cv2.cudacodec.VideoReader):
                     (grabbed, frame) = self.video_reader.nextFrame()
 
                 # if the `grabbed` boolean is `False`, then we have
@@ -85,7 +85,7 @@ class EagerVideoCapture:
                     self.exhausted = True
                     self.stopped = True
                 else:
-                    if isinstance(self.video_reader, cv2.cudacodec.VideoReader):
+                    if hasattr(cv2, 'cudacodec')  and isinstance(self.video_reader, cv2.cudacodec.VideoReader):
                         frame = frame.download()
 
                 # if there are transforms to be done, might as well

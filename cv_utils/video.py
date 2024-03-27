@@ -34,7 +34,7 @@ class VideoInput:
         video_details.release()
 
         if use_gpu:
-            if use_cvcuda:
+            if use_cvcuda and hasattr(cv2, 'cudacodec'):
                 self.video_reader = cv2.cudacodec.createVideoReader(
                     filename=input_path
                 )
@@ -133,7 +133,7 @@ class VideoInput:
         else:
             if isinstance(self.video_reader, cv2.VideoCapture):
                 (success, frame) = self.video_reader.read()
-            elif isinstance(self.video_reader, cv2.cudacodec.VideoReader):
+            elif hasattr(cv2, 'cudacodec') and isinstance(self.video_reader, cv2.cudacodec.VideoReader):
                 (success, frame) = self.video_reader.nextFrame()
 
         if success:
